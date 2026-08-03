@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { SignInForm } from "@/components/SignInForm";
 import {
   ShieldCheck,
   Users,
@@ -391,7 +392,7 @@ function AuditSessionsTab({ audits }: { audits: AuditResult[] }) {
 
 export default function AdminLeads() {
   const [, navigate] = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<"leads" | "audits">("leads");
   const [search, setSearch] = useState("");
   const [filterArchetype, setFilterArchetype] = useState<string>("all");
@@ -403,15 +404,27 @@ export default function AdminLeads() {
     enabled: !!user && user.role === "admin",
   });
 
-  // Auto-redirect non-admins
+  // Auto-redirect signed-in non-admins back to the main app
   useEffect(() => {
     if (user && user.role !== "admin") {
       navigate("/");
     }
   }, [user, navigate]);
 
-  // Show nothing while auth is loading or redirect is pending
-  if (!user || user.role !== "admin") {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--color-primary)" }} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <SignInForm />;
+  }
+
+  // Signed in but not admin — redirect effect above is handling navigation
+  if (user.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--color-primary)" }} />
