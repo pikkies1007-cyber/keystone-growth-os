@@ -1,0 +1,283 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Keystone Growth OS — Design Tokens ─────────────────────────────────── */
+
+@theme inline {
+  /* Brand Colours */
+  --color-primary:        oklch(55% 0.12 175);   /* Teal #2D8B7A */
+  --color-primary-dark:   oklch(38% 0.10 175);   /* Deep teal #1A5C50 */
+  --color-accent:         oklch(70% 0.10 75);    /* Gold #C9A84C */
+  --color-accent-light:   oklch(82% 0.08 75);    /* Light gold */
+
+  /* Backgrounds */
+  --color-bg-base:        oklch(13% 0.02 220);   /* #0F1923 dark navy */
+  --color-bg-surface:     oklch(17% 0.025 220);  /* #162230 card surface */
+  --color-bg-sidebar:     oklch(11% 0.02 220);   /* #0C1520 sidebar */
+  --color-bg-elevated:    oklch(21% 0.03 220);   /* Elevated panels */
+
+  /* Text */
+  --color-text-base:      oklch(94% 0.01 220);   /* #F0F4F8 near-white */
+  --color-text-muted:     oklch(65% 0.04 220);   /* #8FA3B1 muted */
+  --color-text-subtle:    oklch(45% 0.03 220);   /* Very muted */
+
+  /* Borders */
+  --color-border:         oklch(22% 0.03 220);   /* #243447 */
+  --color-border-light:   oklch(28% 0.03 220);   /* Lighter border */
+
+  /* Status Colours */
+  --color-success:        oklch(62% 0.15 155);   /* Green */
+  --color-warning:        oklch(75% 0.12 75);    /* Amber */
+  --color-danger:         oklch(60% 0.18 25);    /* Red */
+  --color-info:           oklch(65% 0.12 240);   /* Blue */
+
+  /* Shadcn compatibility */
+  --color-background:     var(--color-bg-base);
+  --color-foreground:     var(--color-text-base);
+  --color-card:           var(--color-bg-surface);
+  --color-card-foreground: var(--color-text-base);
+  --color-popover:        var(--color-bg-elevated);
+  --color-popover-foreground: var(--color-text-base);
+  --color-primary-foreground: oklch(98% 0.005 220);
+  --color-secondary:      var(--color-bg-elevated);
+  --color-secondary-foreground: var(--color-text-base);
+  --color-muted:          var(--color-bg-elevated);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-accent-foreground: var(--color-bg-base);
+  --color-destructive:    var(--color-danger);
+  --color-destructive-foreground: oklch(98% 0.005 220);
+  --color-border:         var(--color-border);
+  --color-input:          var(--color-bg-elevated);
+  --color-ring:           var(--color-primary);
+
+  /* Radius */
+  --radius-sm:  0.375rem;
+  --radius:     0.625rem;
+  --radius-md:  0.75rem;
+  --radius-lg:  1rem;
+  --radius-xl:  1.25rem;
+  --radius-2xl: 1.5rem;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Sora", "Inter", system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 2px 12px oklch(0% 0 0 / 0.35);
+  --shadow-elevated: 0 4px 24px oklch(0% 0 0 / 0.45);
+  --shadow-glow-primary: 0 0 20px oklch(55% 0.12 175 / 0.25);
+  --shadow-glow-accent: 0 0 20px oklch(70% 0.10 75 / 0.25);
+
+  /* Easing */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-base);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--color-text-base);
+  }
+
+  a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 180ms var(--ease-out);
+  }
+
+  a:hover {
+    color: var(--color-accent);
+  }
+
+  ::selection {
+    background-color: oklch(55% 0.12 175 / 0.35);
+    color: var(--color-text-base);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--color-bg-sidebar); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-light); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-text-subtle); }
+
+  /* Focus ring */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+/* ─── Container ───────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  .container {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px)  { .container { padding-inline: 1.5rem; } }
+  @media (min-width: 1024px) { .container { max-width: 1280px; padding-inline: 2rem; } }
+
+  /* Flex defaults */
+  .flex { min-width: 0; min-height: 0; }
+
+  /* Keystone brand utilities */
+  .text-primary   { color: var(--color-primary); }
+  .text-accent    { color: var(--color-accent); }
+  .text-muted     { color: var(--color-text-muted); }
+  .bg-surface     { background-color: var(--color-bg-surface); }
+  .bg-sidebar     { background-color: var(--color-bg-sidebar); }
+  .bg-elevated    { background-color: var(--color-bg-elevated); }
+  .border-default { border-color: var(--color-border); }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Card glow on hover */
+  .card-glow:hover {
+    box-shadow: var(--shadow-glow-primary);
+  }
+
+  /* Module status badges */
+  .status-not-started { background-color: oklch(22% 0.03 220); color: var(--color-text-muted); }
+  .status-in-progress { background-color: oklch(55% 0.12 175 / 0.15); color: var(--color-primary); }
+  .status-complete    { background-color: oklch(62% 0.15 155 / 0.15); color: var(--color-success); }
+  .status-triggered   { background-color: oklch(70% 0.10 75 / 0.15); color: var(--color-accent); }
+
+  /* Sidebar active item */
+  .sidebar-item-active {
+    background-color: oklch(55% 0.12 175 / 0.15);
+    color: var(--color-primary);
+    border-left: 3px solid var(--color-primary);
+  }
+
+  /* Button press feedback */
+  button:active { transform: scale(0.97); }
+}
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+
+@layer utilities {
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-fade-in {
+      animation: fadeIn 200ms var(--ease-out) both;
+    }
+    .animate-slide-up {
+      animation: slideUp 250ms var(--ease-out) both;
+    }
+    .animate-slide-in-left {
+      animation: slideInLeft 280ms var(--ease-out) both;
+    }
+    .stagger-1 { animation-delay: 30ms; }
+    .stagger-2 { animation-delay: 60ms; }
+    .stagger-3 { animation-delay: 90ms; }
+    .stagger-4 { animation-delay: 120ms; }
+    .stagger-5 { animation-delay: 150ms; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-16px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+}
+
+/* ─── Progress Bar ────────────────────────────────────────────────────────── */
+
+.progress-bar {
+  height: 6px;
+  background-color: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  border-radius: 3px;
+  transition: width 500ms var(--ease-out);
+}
+
+/* ─── Diagnostic Question Cards ──────────────────────────────────────────── */
+
+.question-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.question-card:hover {
+  border-color: var(--color-border-light);
+}
+
+.option-button {
+  width: 100%;
+  text-align: left;
+  padding: 0.875rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-elevated);
+  color: var(--color-text-base);
+  cursor: pointer;
+  transition: all 180ms var(--ease-out);
+  font-size: 0.9375rem;
+}
+
+.option-button:hover {
+  border-color: var(--color-primary);
+  background-color: oklch(55% 0.12 175 / 0.08);
+}
+
+.option-button.selected {
+  border-color: var(--color-primary);
+  background-color: oklch(55% 0.12 175 / 0.15);
+  color: var(--color-text-base);
+}
+
+/* ─── Archetype Cards ─────────────────────────────────────────────────────── */
+
+.archetype-hustler  { border-top: 3px solid oklch(62% 0.18 25); }
+.archetype-giver    { border-top: 3px solid oklch(65% 0.12 240); }
+.archetype-protector { border-top: 3px solid oklch(62% 0.15 155); }
+.archetype-enjoyer  { border-top: 3px solid oklch(70% 0.10 75); }
