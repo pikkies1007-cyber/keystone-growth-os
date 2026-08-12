@@ -195,9 +195,9 @@ export default function FreedomBlueprint() {
 
   function handleContinue() {
     if (result?.moneyFrictionDetected) {
-      navigate("/money-identity?source=blueprint");
+      navigate("/os/money-identity?source=blueprint");
     } else {
-      navigate("/goals");
+      navigate("/os/goals");
     }
   }
 
@@ -306,7 +306,7 @@ export default function FreedomBlueprint() {
               <p className="text-sm leading-relaxed" style={{ color: "var(--color-text-muted)" }}>
                 Your growth vision is clear. What would it look like if your money mindset was equally clear?{" "}
                 <button
-                  onClick={() => navigate("/money-identity?source=blueprint")}
+                  onClick={() => navigate("/os/money-identity?source=blueprint")}
                   className="underline font-medium hover:opacity-80 transition-opacity"
                   style={{ color: "var(--color-primary)" }}
                 >
@@ -327,7 +327,7 @@ export default function FreedomBlueprint() {
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/os/goals")}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >

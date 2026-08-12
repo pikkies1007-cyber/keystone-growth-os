@@ -129,14 +129,14 @@ export default function WeeklyRhythm() {
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => navigate("/wealth-reset")}
+              onClick={() => navigate("/os/wealth-reset")}
               className="w-full py-3 rounded-lg text-sm font-semibold transition-all duration-180"
               style={{ backgroundColor: "var(--color-primary)", color: "white" }}
             >
               Start the 21-Day Wealth Reset
             </button>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/os")}
               className="w-full py-2.5 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >
@@ -222,7 +222,7 @@ export default function WeeklyRhythm() {
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/os")}
               className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-2"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -457,7 +457,7 @@ export default function WeeklyRhythm() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
-                onClick={() => navigate("/goals")}
+                onClick={() => navigate("/os/goals")}
                 className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-900 font-semibold"
               >
                 Review My 90-Day Goals
@@ -465,7 +465,7 @@ export default function WeeklyRhythm() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/os")}
                 className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
               >
                 Back to Dashboard

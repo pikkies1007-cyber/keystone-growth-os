@@ -415,7 +415,7 @@ export default function Dashboard() {
           </p>
 
           <div className="flex flex-wrap gap-3 mt-6">
-            <Link href="/audit">
+            <Link href="/os/audit">
               <button
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-180"
                 style={{ backgroundColor: "var(--color-primary)", color: "white" }}
@@ -543,7 +543,7 @@ export default function Dashboard() {
 
             {/* Action link */}
             <button
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/os/goals")}
               className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
               style={{ color: "var(--color-primary)" }}
             >

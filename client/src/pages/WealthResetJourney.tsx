@@ -254,7 +254,7 @@ export default function WealthResetJourney() {
               <ExternalLink className="w-4 h-4" />
             </a>
             <button
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/os/goals")}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >

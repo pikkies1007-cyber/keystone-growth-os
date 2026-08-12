@@ -300,9 +300,9 @@ export default function BottleneckAudit() {
 
   function handleContinue() {
     if (result?.moneyFrictionDetected) {
-      navigate("/money-identity?source=audit");
+      navigate("/os/money-identity?source=audit");
     } else {
-      navigate("/blueprint");
+      navigate("/os/blueprint");
     }
   }
 
@@ -506,7 +506,7 @@ export default function BottleneckAudit() {
                     The 10-80-10 Delegation Toolkit gives you a structured framework to hand over the right work to the right people — and stay in your zone of genius.
                   </p>
                   <button
-                    onClick={() => navigate("/delegation")}
+                    onClick={() => navigate("/os/delegation")}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold"
                     style={{ backgroundColor: "var(--color-primary)", color: "white" }}
                   >
@@ -531,7 +531,7 @@ export default function BottleneckAudit() {
                     The fastest cash is always from people who already know you. The Flywheel Toolkit gives you a 30-day reactivation plan — reviews, referrals, and repeat revenue.
                   </p>
                   <button
-                    onClick={() => navigate("/flywheel")}
+                    onClick={() => navigate("/os/flywheel")}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold"
                     style={{ backgroundColor: "oklch(65% 0.15 160)", color: "white" }}
                   >
@@ -552,7 +552,7 @@ export default function BottleneckAudit() {
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={() => navigate("/blueprint")}
+              onClick={() => navigate("/os/blueprint")}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >

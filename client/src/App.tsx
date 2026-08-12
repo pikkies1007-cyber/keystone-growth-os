@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import AppLayout from "./components/AppLayout";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import BottleneckAudit from "./pages/BottleneckAudit";
 import FreedomBlueprint from "./pages/FreedomBlueprint";
@@ -19,37 +20,38 @@ import WeeklyRhythm from "./pages/WeeklyRhythm";
 import FinancialRoadmap from "./pages/FinancialRoadmap";
 import AdminLeads from "./pages/AdminLeads";
 
-function Router() {
-  return (
-    <AppLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/audit" component={BottleneckAudit} />
-        <Route path="/blueprint" component={FreedomBlueprint} />
-        <Route path="/goals" component={GoalDashboard} />
-        <Route path="/money-identity" component={MoneyIdentityCheckpoint} />
-        <Route path="/wealth-reset" component={WealthResetJourney} />
-        <Route path="/delegation" component={DelegationToolkit} />
-        <Route path="/flywheel" component={FlywheelToolkit} />
-        <Route path="/snapshot" component={BusinessSnapshot} />
-        <Route path="/pricing" component={PricingToolkit} />
-        <Route path="/weekly" component={WeeklyRhythm} />
-        <Route path="/roadmap" component={FinancialRoadmap} />
-        <Route path="/admin/leads" component={AdminLeads} />
-        <Route path="/404" component={NotFound} />
-        <Route component={NotFound} />
-      </Switch>
-    </AppLayout>
-  );
-}
-
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <Switch>
+            {/* Marketing landing page — no app chrome, this is what keystonebusinessgroup.co.za shows */}
+            <Route path="/" component={LandingPage} />
+
+            {/* Everything else is the actual Growth OS app, under /os */}
+            <Route>
+              <AppLayout>
+                <Switch>
+                  <Route path="/os" component={Dashboard} />
+                  <Route path="/os/audit" component={BottleneckAudit} />
+                  <Route path="/os/blueprint" component={FreedomBlueprint} />
+                  <Route path="/os/goals" component={GoalDashboard} />
+                  <Route path="/os/money-identity" component={MoneyIdentityCheckpoint} />
+                  <Route path="/os/wealth-reset" component={WealthResetJourney} />
+                  <Route path="/os/delegation" component={DelegationToolkit} />
+                  <Route path="/os/flywheel" component={FlywheelToolkit} />
+                  <Route path="/os/snapshot" component={BusinessSnapshot} />
+                  <Route path="/os/pricing" component={PricingToolkit} />
+                  <Route path="/os/weekly" component={WeeklyRhythm} />
+                  <Route path="/os/roadmap" component={FinancialRoadmap} />
+                  <Route path="/os/admin/leads" component={AdminLeads} />
+                  <Route component={NotFound} />
+                </Switch>
+              </AppLayout>
+            </Route>
+          </Switch>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

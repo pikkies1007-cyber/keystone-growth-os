@@ -495,7 +495,7 @@ export default function GoalDashboard() {
               </p>
             </div>
             <button
-              onClick={() => navigate("/money-identity?source=goals")}
+              onClick={() => navigate("/os/money-identity?source=goals")}
               className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-180 hover:opacity-90"
               style={{ backgroundColor: "var(--color-primary)", color: "white" }}
             >
@@ -508,7 +508,7 @@ export default function GoalDashboard() {
         {/* Navigation */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/os")}
             className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-180"
             style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
           >

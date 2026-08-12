@@ -38,50 +38,50 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: "Dashboard",
-    path: "/",
+    path: "/os",
     icon: LayoutDashboard,
     description: "Overview & progress",
   },
   // Business Snapshot moved to top — it feeds the Audit
   {
     label: "Business Snapshot",
-    path: "/snapshot",
+    path: "/os/snapshot",
     icon: Building2,
     description: "Your business on one page",
   },
   {
     label: "Bottleneck Audit",
-    path: "/audit",
+    path: "/os/audit",
     icon: Search,
     description: "Diagnose your constraints",
   },
   {
     label: "Freedom Blueprint",
-    path: "/blueprint",
+    path: "/os/blueprint",
     icon: Compass,
     description: "Design your growth path",
   },
   {
     label: "Goal Dashboard",
-    path: "/goals",
+    path: "/os/goals",
     icon: Target,
     description: "Your 90-day action focus",
   },
   {
     label: "Delegation Toolkit",
-    path: "/delegation",
+    path: "/os/delegation",
     icon: Users,
     description: "10-80-10 framework",
   },
   {
     label: "Flywheel Toolkit",
-    path: "/flywheel",
+    path: "/os/flywheel",
     icon: RefreshCw,
     description: "Reactivate past customers",
   },
   {
     label: "Pricing Toolkit",
-    path: "/pricing",
+    path: "/os/pricing",
     icon: TrendingUp,
     description: "Margin & break-even check",
     unlockKey: "isPricingUnlocked",
@@ -89,7 +89,7 @@ const navItems: NavItem[] = [
   },
   {
     label: "Weekly Rhythm",
-    path: "/weekly",
+    path: "/os/weekly",
     icon: CalendarDays,
     description: "Plan, execute, review",
     unlockKey: "isWeeklyRhythmUnlocked",
@@ -97,7 +97,7 @@ const navItems: NavItem[] = [
   },
   {
     label: "12-Month Roadmap",
-    path: "/roadmap",
+    path: "/os/roadmap",
     icon: Map,
     description: "Your financial direction",
     unlockKey: "isRoadmapUnlocked",
@@ -107,14 +107,14 @@ const navItems: NavItem[] = [
   // Money Identity and Wealth Reset are contextual — not in primary nav
   {
     label: "Money Identity",
-    path: "/money-identity",
+    path: "/os/money-identity",
     icon: Target,
     description: "Contextual checkpoint",
     hidden: true,
   },
   {
     label: "Wealth Reset",
-    path: "/wealth-reset",
+    path: "/os/wealth-reset",
     icon: Target,
     description: "Financial journey",
     hidden: true,
@@ -161,7 +161,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   function renderNavItem(item: NavItem, mobile = false) {
     const isActive =
       location === item.path ||
-      (item.path !== "/" && location.startsWith(item.path));
+      (item.path !== "/os" && location.startsWith(item.path));
     const unlocked = isUnlocked(item);
     const Icon = item.icon;
 
@@ -278,20 +278,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {visibleNav.map((item) => renderNavItem(item, false))}
           {/* Admin-only entry */}
           {isAdmin && (
-            <Link href="/admin/leads">
+            <Link href="/os/admin/leads">
               <div
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 cursor-pointer mt-2",
-                  location.startsWith("/admin") ? "sidebar-item-active" : "hover:bg-white/5"
+                  location.startsWith("/os/admin") ? "sidebar-item-active" : "hover:bg-white/5"
                 )}
                 style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.75rem", marginTop: "0.5rem" }}
               >
                 <ShieldCheck
                   className="w-4 h-4 shrink-0"
-                  style={{ color: location.startsWith("/admin") ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                  style={{ color: location.startsWith("/os/admin") ? "var(--color-primary)" : "var(--color-text-muted)" }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium" style={{ color: location.startsWith("/admin") ? "var(--color-primary)" : "var(--color-text-base)" }}>Admin</p>
+                  <p className="text-sm font-medium" style={{ color: location.startsWith("/os/admin") ? "var(--color-primary)" : "var(--color-text-base)" }}>Admin</p>
                   <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Leads &amp; diagnostics</p>
                 </div>
               </div>
@@ -366,20 +366,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {visibleNav.map((item) => renderNavItem(item, true))}
           {isAdmin && (
-            <Link href="/admin/leads">
+            <Link href="/os/admin/leads">
               <div
                 className={cn(
                   "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-150 cursor-pointer",
-                  location.startsWith("/admin") ? "sidebar-item-active" : "hover:bg-white/5"
+                  location.startsWith("/os/admin") ? "sidebar-item-active" : "hover:bg-white/5"
                 )}
                 style={{ borderTop: "1px solid var(--color-border)", marginTop: "0.5rem", paddingTop: "0.75rem" }}
               >
                 <ShieldCheck
                   className="w-5 h-5 shrink-0"
-                  style={{ color: location.startsWith("/admin") ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                  style={{ color: location.startsWith("/os/admin") ? "var(--color-primary)" : "var(--color-text-muted)" }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium" style={{ color: location.startsWith("/admin") ? "var(--color-primary)" : "var(--color-text-base)" }}>Admin</p>
+                  <p className="text-sm font-medium" style={{ color: location.startsWith("/os/admin") ? "var(--color-primary)" : "var(--color-text-base)" }}>Admin</p>
                   <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Leads &amp; diagnostics</p>
                 </div>
               </div>

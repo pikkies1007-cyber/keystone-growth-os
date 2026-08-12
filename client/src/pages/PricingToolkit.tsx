@@ -148,14 +148,14 @@ export default function PricingToolkit() {
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => navigate("/audit")}
+              onClick={() => navigate("/os/audit")}
               className="w-full py-3 rounded-lg text-sm font-semibold transition-all duration-180"
               style={{ backgroundColor: "var(--color-primary)", color: "white" }}
             >
               Run Bottleneck Audit
             </button>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/os")}
               className="w-full py-2.5 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >
@@ -318,7 +318,7 @@ export default function PricingToolkit() {
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/os/goals")}
               className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-900 font-semibold"
             >
               Add Pricing Goal to Dashboard
@@ -326,7 +326,7 @@ export default function PricingToolkit() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/os")}
               className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
             >
               Back to Dashboard
@@ -348,7 +348,7 @@ export default function PricingToolkit() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/os")}
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

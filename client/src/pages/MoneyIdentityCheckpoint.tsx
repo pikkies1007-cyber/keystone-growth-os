@@ -571,7 +571,7 @@ export default function MoneyIdentityCheckpoint() {
           {/* CTA to Wealth Reset */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate("/wealth-reset")}
+              onClick={() => navigate("/os/wealth-reset")}
               className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg text-sm font-semibold transition-all duration-180"
               style={{ backgroundColor: "var(--color-primary)", color: "white" }}
             >
@@ -579,7 +579,7 @@ export default function MoneyIdentityCheckpoint() {
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/os/goals")}
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >

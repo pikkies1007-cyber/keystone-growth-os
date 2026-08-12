@@ -175,7 +175,7 @@ export default function BusinessSnapshot() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
-            onClick={() => navigate("/audit")}
+            onClick={() => navigate("/os/audit")}
             className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-900 font-semibold"
           >
             Start Bottleneck Audit
@@ -183,7 +183,7 @@ export default function BusinessSnapshot() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/os")}
             className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700"
           >
             Back to Dashboard
@@ -205,7 +205,7 @@ export default function BusinessSnapshot() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/os")}
           className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />

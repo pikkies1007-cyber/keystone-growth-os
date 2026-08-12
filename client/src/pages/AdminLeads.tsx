@@ -407,7 +407,7 @@ export default function AdminLeads() {
   // Auto-redirect signed-in non-admins back to the main app
   useEffect(() => {
     if (user && user.role !== "admin") {
-      navigate("/");
+      navigate("/os");
     }
   }, [user, navigate]);
 

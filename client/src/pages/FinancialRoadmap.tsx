@@ -160,14 +160,14 @@ export default function FinancialRoadmap() {
           </p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => navigate("/wealth-reset")}
+              onClick={() => navigate("/os/wealth-reset")}
               className="w-full py-3 rounded-lg text-sm font-semibold transition-all duration-180"
               style={{ backgroundColor: "var(--color-primary)", color: "white" }}
             >
               Start the 21-Day Wealth Reset
             </button>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/os")}
               className="w-full py-2.5 rounded-lg text-sm font-medium transition-all duration-180"
               style={{ border: "1px solid var(--color-border-light)", color: "var(--color-text-muted)" }}
             >
@@ -223,7 +223,7 @@ export default function FinancialRoadmap() {
             <p className="text-sm text-white/70">12-Month Financial Roadmap</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-white/50 hover:text-white">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/os")} className="text-white/50 hover:text-white">
           <ArrowLeft className="w-4 h-4 mr-1" /> Dashboard
         </Button>
       </div>
@@ -430,7 +430,7 @@ export default function FinancialRoadmap() {
           {isComplete && (
             <Button
               variant="outline"
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/os/goals")}
               className="border-[#B8962E]/30 text-white/60 hover:text-white hover:border-[#B8962E]/60 tracking-[2px] uppercase text-xs px-8 py-6"
             >
               View My 90-Day Goals <ChevronRight className="w-4 h-4 ml-1" />
@@ -457,7 +457,7 @@ export default function FinancialRoadmap() {
           </p>
         </div>
         <Button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/os")}
           className="bg-transparent border border-[#B8962E]/40 text-[#d4af5a] hover:bg-[#B8962E] hover:text-[#1C3129] font-semibold tracking-[3px] uppercase text-xs px-10 py-5 transition-all duration-200 relative z-10"
         >
           <Users className="w-4 h-4 mr-2" /> Return to Dashboard
