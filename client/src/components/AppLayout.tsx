@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Lock,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOSSession } from "../hooks/useOSSession";
@@ -41,6 +42,12 @@ const navItems: NavItem[] = [
     path: "/os",
     icon: LayoutDashboard,
     description: "Overview & progress",
+  },
+  {
+    label: "Business Coach",
+    path: "/os/coach",
+    icon: Sparkles,
+    description: "Ask anything, anytime",
   },
   // Business Snapshot moved to top — it feeds the Audit
   {
@@ -297,6 +304,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
             </Link>
           )}
+          {!user && (
+            <Link href="/os/coach">
+              <div
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 cursor-pointer mt-2 hover:bg-white/5"
+                style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.75rem", marginTop: "0.5rem" }}
+              >
+                <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium" style={{ color: "var(--color-text-base)" }}>Sign In</p>
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Access your account</p>
+                </div>
+              </div>
+            </Link>
+          )}
         </nav>
 
         {/* Sidebar footer */}
@@ -381,6 +402,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium" style={{ color: location.startsWith("/os/admin") ? "var(--color-primary)" : "var(--color-text-base)" }}>Admin</p>
                   <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Leads &amp; diagnostics</p>
+                </div>
+              </div>
+            </Link>
+          )}
+          {!user && (
+            <Link href="/os/coach">
+              <div
+                className="flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-150 cursor-pointer hover:bg-white/5"
+                style={{ borderTop: "1px solid var(--color-border)", marginTop: "0.5rem", paddingTop: "0.75rem" }}
+              >
+                <ShieldCheck className="w-5 h-5 shrink-0" style={{ color: "var(--color-text-muted)" }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium" style={{ color: "var(--color-text-base)" }}>Sign In</p>
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Access your account</p>
                 </div>
               </div>
             </Link>

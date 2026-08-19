@@ -19,6 +19,7 @@ import PricingToolkit from "./pages/PricingToolkit";
 import WeeklyRhythm from "./pages/WeeklyRhythm";
 import FinancialRoadmap from "./pages/FinancialRoadmap";
 import AdminLeads from "./pages/AdminLeads";
+import BusinessCoach from "./pages/BusinessCoach";
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
                   <Route path="/os/pricing" component={PricingToolkit} />
                   <Route path="/os/weekly" component={WeeklyRhythm} />
                   <Route path="/os/roadmap" component={FinancialRoadmap} />
+                  <Route path="/os/coach" component={BusinessCoach} />
                   <Route path="/os/admin/leads" component={AdminLeads} />
                   <Route component={NotFound} />
                 </Switch>

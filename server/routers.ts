@@ -1,6 +1,7 @@
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, adminProcedure, router } from "./_core/trpc";
+import { publicProcedure, adminProcedure, protectedProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
+import { getCoachReply } from "./_core/coach";
 import { createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, getAllLeadsAdmin, getAllAuditResults } from "./db";
 import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment } from "./email";
 import { z } from "zod";
@@ -229,11 +230,33 @@ const adminRouter = router({
   }),
 });
 
+const coachRouter = router({
+  chat: protectedProcedure
+    .input(
+      z.object({
+        history: z
+          .array(
+            z.object({
+              role: z.enum(["user", "assistant"]),
+              content: z.string().min(1).max(4000),
+            })
+          )
+          .min(1)
+          .max(40),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const reply = await getCoachReply(input.history);
+      return { reply };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
   system: systemRouter,
   admin: adminRouter,
+  coach: coachRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     // Session lives client-side in the Supabase SDK (localStorage). Signing out
