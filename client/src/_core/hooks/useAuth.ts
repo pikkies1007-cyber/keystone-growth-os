@@ -25,7 +25,13 @@ export function useAuth() {
     });
 
     return () => listener.subscription.unsubscribe();
-  }, [utils]);
+    // Intentionally run once on mount only. `utils` (trpc.useUtils()) is not
+    // guaranteed to be a stable reference across renders — including it here
+    // caused this effect to re-fire every render, which re-triggers
+    // getSession()/setSession() each time, producing a fast render loop
+    // (visible as a flashing/flickering screen after sign-in).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     enabled: Boolean(session),
