@@ -8,5 +8,5 @@ export const ENV = {
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   resendFromAddress: process.env.RESEND_FROM_ADDRESS ?? "Keystone Growth OS <onboarding@resend.dev>",
   resendOwnerEmail: process.env.RESEND_OWNER_EMAIL ?? "",
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
 };

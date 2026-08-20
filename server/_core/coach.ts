@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
 
@@ -17,27 +17,25 @@ Your job: help the person think clearly about what's actually holding their busi
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export async function getCoachReply(history: ChatMessage[]): Promise<string> {
-  if (!ENV.anthropicApiKey) {
+  if (!ENV.openaiApiKey) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
-      message: "The business coach isn't configured yet — an ANTHROPIC_API_KEY is missing.",
+      message: "The business coach isn't configured yet — an OPENAI_API_KEY is missing.",
     });
   }
 
-  const anthropic = new Anthropic({ apiKey: ENV.anthropicApiKey });
+  const openai = new OpenAI({ apiKey: ENV.openaiApiKey });
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: history.map(m => ({ role: m.role, content: m.content })),
+      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
     });
 
-    const textBlock = response.content.find(block => block.type === "text");
-    return textBlock && "text" in textBlock ? textBlock.text : "";
+    return response.choices[0]?.message?.content ?? "";
   } catch (error) {
-    console.error("[Coach] Anthropic API error:", error);
+    console.error("[Coach] OpenAI API error:", error);
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The business coach couldn't respond just now. Try again in a moment." });
   }
 }
