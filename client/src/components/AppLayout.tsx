@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SignInForm } from "@/components/SignInForm";
 import { useOSSession } from "../hooks/useOSSession";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -137,8 +138,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const brand = activeBrand;
   const session = useOSSession();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isPublicPage = location === "/os/audit";
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -243,6 +245,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {inner}
       </Link>
     );
+  }
+
+  if (!isPublicPage) {
+    if (authLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--color-bg-base)" }}>
+          <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--color-primary)" }} />
+        </div>
+      );
+    }
+    if (!user) {
+      return <SignInForm />;
+    }
   }
 
   return (
