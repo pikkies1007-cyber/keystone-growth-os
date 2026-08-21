@@ -1,4 +1,4 @@
 import "dotenv/config";
-import { createApp } from "../server/_core/app";
+import { createApp } from "../server-dist/app.js";
 
 export default createApp();
