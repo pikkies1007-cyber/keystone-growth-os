@@ -47,6 +47,21 @@ export function useAuth() {
     if (error) throw error;
   }, []);
 
+  // Fallback for the clickable magic link: every Supabase magic-link email
+  // also contains a 6-digit code. Verifying that code directly sidesteps a
+  // common failure mode where a mail provider's security scanner "visits"
+  // the link automatically to check it's safe, which burns the link's
+  // single-use token before the person ever clicks it themselves (producing
+  // an "otp_expired"/"invalid" error on click even on a freshly sent email).
+  const verifyEmailCode = useCallback(async (email: string, code: string) => {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "email",
+    });
+    if (error) throw error;
+  }, []);
+
   const signInWithOAuth = useCallback(async (provider: "google" | "github") => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -74,6 +89,7 @@ export function useAuth() {
     ...state,
     refresh: () => meQuery.refetch(),
     signInWithEmail,
+    verifyEmailCode,
     signInWithOAuth,
     logout,
   };
