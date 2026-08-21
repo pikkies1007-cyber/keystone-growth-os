@@ -42,7 +42,7 @@ export function useAuth() {
   const signInWithEmail = useCallback(async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/os` },
     });
     if (error) throw error;
   }, []);
@@ -50,7 +50,7 @@ export function useAuth() {
   const signInWithOAuth = useCallback(async (provider: "google" | "github") => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/os` },
     });
     if (error) throw error;
   }, []);
