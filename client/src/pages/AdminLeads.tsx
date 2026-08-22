@@ -419,6 +419,41 @@ export default function AdminLeads() {
     }
   }, [user, navigate]);
 
+  const leads: EnrichedLead[] = (data?.leads ?? []) as EnrichedLead[];
+  const audits: AuditResult[] = (data?.audits ?? []) as AuditResult[];
+
+  // Every hook below must run on every render, regardless of loading/auth
+  // state -- React requires the same hooks in the same order every time.
+  // These two useMemo calls used to sit after the early returns below,
+  // which meant they were skipped entirely while loading/signed-out and
+  // then suddenly called once data arrived: a hook-count mismatch between
+  // renders, which is exactly what "Minified React error #310" means.
+  const filteredLeads = useMemo(() => {
+    const filtered = leads.filter((l) => {
+      const matchSearch =
+        !search ||
+        (l.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (l.email ?? "").toLowerCase().includes(search.toLowerCase());
+      const matchArch = filterArchetype === "all" || l.moneyArchetype === filterArchetype;
+      return matchSearch && matchArch;
+    });
+
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = (a.name ?? "").localeCompare(b.name ?? "");
+      else if (sortKey === "archetype") cmp = (a.moneyArchetype ?? "").localeCompare(b.moneyArchetype ?? "");
+      else if (sortKey === "bottleneck") cmp = (a.primaryBottleneck ?? "").localeCompare(b.primaryBottleneck ?? "");
+      else cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [leads, search, filterArchetype, sortKey, sortDir]);
+
+  const archetypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    leads.forEach((l) => { if (l.moneyArchetype) counts[l.moneyArchetype] = (counts[l.moneyArchetype] ?? 0) + 1; });
+    return counts;
+  }, [leads]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -440,9 +475,6 @@ export default function AdminLeads() {
     );
   }
 
-  const leads: EnrichedLead[] = (data?.leads ?? []) as EnrichedLead[];
-  const audits: AuditResult[] = (data?.audits ?? []) as AuditResult[];
-
   // ── Sort handler ───────────────────────────────────────────────────────────
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -452,34 +484,6 @@ export default function AdminLeads() {
       setSortDir("asc");
     }
   }
-
-  // ── Filter + sort leads ────────────────────────────────────────────────────
-  const filteredLeads = useMemo(() => {
-    const filtered = leads.filter((l) => {
-      const matchSearch =
-        !search ||
-        (l.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
-        (l.email ?? "").toLowerCase().includes(search.toLowerCase());
-      const matchArch = filterArchetype === "all" || l.moneyArchetype === filterArchetype;
-      return matchSearch && matchArch;
-    });
-
-    return [...filtered].sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "name") cmp = (a.name ?? "").localeCompare(b.name ?? "");
-      else if (sortKey === "archetype") cmp = (a.moneyArchetype ?? "").localeCompare(b.moneyArchetype ?? "");
-      else if (sortKey === "bottleneck") cmp = (a.primaryBottleneck ?? "").localeCompare(b.primaryBottleneck ?? "");
-      else cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [leads, search, filterArchetype, sortKey, sortDir]);
-
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const archetypeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    leads.forEach((l) => { if (l.moneyArchetype) counts[l.moneyArchetype] = (counts[l.moneyArchetype] ?? 0) + 1; });
-    return counts;
-  }, [leads]);
 
   return (
     <div className="min-h-screen px-6 py-8 lg:px-10">
