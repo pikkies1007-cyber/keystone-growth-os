@@ -155,7 +155,7 @@ export default function Dashboard() {
       title: "Business Bottleneck Audit",
       description:
         "Diagnose the single biggest constraint holding your business back across five dimensions: Sales, Cash, Staff, Systems, and Owner Behaviour.",
-      path: "/audit",
+      path: "/os/audit",
       icon: Search,
       status: session.hasAuditResult ? "complete" : "not-started",
       estimatedTime: "8–10 min",
@@ -166,7 +166,7 @@ export default function Dashboard() {
       title: "Freedom Design Blueprint",
       description:
         "A guided exploration of your owner behaviour, pressure points, goals, and growth vision — surfacing the friction that keeps you stuck.",
-      path: "/blueprint",
+      path: "/os/blueprint",
       icon: Compass,
       status: session.hasBlueprintResult ? "complete" : session.hasAuditResult ? "in-progress" : "not-started",
       estimatedTime: "10–12 min",
@@ -177,7 +177,7 @@ export default function Dashboard() {
       title: "Goal Dashboard",
       description:
         "Convert your Audit and Blueprint insights into a prioritised 90-day action plan with progress tracking.",
-      path: "/goals",
+      path: "/os/goals",
       icon: Target,
       status: session.hasBlueprintResult ? "in-progress" : "not-started",
       estimatedTime: "5 min",
@@ -188,7 +188,7 @@ export default function Dashboard() {
       title: "Business Snapshot",
       description:
         "A 3-minute guided profile of your business — revenue, team, time drains, and the one thing you want to change.",
-      path: "/snapshot",
+      path: "/os/snapshot",
       icon: Building2,
       status: hasSnapshot ? "complete" : "not-started",
       estimatedTime: "3 min",
@@ -199,7 +199,7 @@ export default function Dashboard() {
       title: "Pricing Toolkit",
       description:
         "Check your margins, calculate your break-even, and confirm you are charging what your business actually needs.",
-      path: "/pricing",
+      path: "/os/pricing",
       icon: TrendingUp,
       status: "not-started",
       estimatedTime: "5 min",
@@ -215,7 +215,7 @@ export default function Dashboard() {
       title: "Weekly Rhythm",
       description:
         "A structured weekly planning and review cycle to keep your goals moving and your energy focused.",
-      path: "/weekly",
+      path: "/os/weekly",
       icon: CalendarDays,
       status: "not-started",
       estimatedTime: "10 min",
@@ -229,7 +229,7 @@ export default function Dashboard() {
       title: "12-Month Roadmap",
       description:
         "Set your three financial milestones, name your non-negotiables, and build the protection system that keeps you on track.",
-      path: "/roadmap",
+      path: "/os/roadmap",
       icon: Map,
       status: hasRoadmap ? "complete" : session.hasBlueprintResult ? "in-progress" : "not-started",
       estimatedTime: "10 min",
