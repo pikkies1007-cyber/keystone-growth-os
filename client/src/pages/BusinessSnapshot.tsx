@@ -66,6 +66,65 @@ const TIME_DRAINS = [
   "Everything — I wear all the hats",
 ];
 
+// ─── Diagnosis + toolkit routing ────────────────────────────────────────────
+// Maps each time-drain answer to the same 5 dimensions the Bottleneck Audit
+// uses (Sales/Cash/Staff/Systems/Owner), a short specific diagnosis, and the
+// toolkit that's the most direct next step for it.
+const DRAIN_DIAGNOSIS: Record<
+  string,
+  { dimension: string; diagnosis: string; toolkitLabel: string; toolkitRoute: string }
+> = {
+  "Admin and paperwork": {
+    dimension: "Systems",
+    diagnosis:
+      "Admin eats hours that should go into the business, not the business's paperwork. This is almost always a delegation problem, not a time-management one — someone else can do this at 80% of your quality for a fraction of your hourly value.",
+    toolkitLabel: "Delegation Toolkit",
+    toolkitRoute: "/os/delegation",
+  },
+  "Chasing payments and invoices": {
+    dimension: "Cash",
+    diagnosis:
+      "Chasing money you've already earned is a cash flow leak, not a sales problem. Before anything else, this needs a repeatable collections process — and a stronger pipeline of paying customers reduces how much you're relying on any one late payer.",
+    toolkitLabel: "Flywheel Toolkit",
+    toolkitRoute: "/os/flywheel",
+  },
+  "Managing staff or contractors": {
+    dimension: "Staff",
+    diagnosis:
+      "If managing people is the drain, the fix is rarely 'manage harder' — it's clearer roles and a framework so decisions don't all have to run through you.",
+    toolkitLabel: "Delegation Toolkit",
+    toolkitRoute: "/os/delegation",
+  },
+  "Finding new customers / marketing": {
+    dimension: "Sales",
+    diagnosis:
+      "Chasing brand-new customers is the most expensive way to grow. The fastest lever is usually the one already sitting in your database — people who've bought before and would again with the right nudge.",
+    toolkitLabel: "Flywheel Toolkit",
+    toolkitRoute: "/os/flywheel",
+  },
+  "Doing work I should be delegating": {
+    dimension: "Owner Behaviour",
+    diagnosis:
+      "You've already diagnosed this one yourself — you said it. The real question isn't whether to delegate, it's what to hand off first without it costing you quality.",
+    toolkitLabel: "Delegation Toolkit",
+    toolkitRoute: "/os/delegation",
+  },
+  "Dealing with customer complaints": {
+    dimension: "Systems",
+    diagnosis:
+      "Complaints eating your time usually means there's no first line of defense before they reach you. A clear process — and someone besides you empowered to run it — stops most of these before they escalate.",
+    toolkitLabel: "Delegation Toolkit",
+    toolkitRoute: "/os/delegation",
+  },
+  "Everything — I wear all the hats": {
+    dimension: "Owner Behaviour",
+    diagnosis:
+      "Wearing every hat is the single most common ceiling on growth — the business can only grow as fast as you personally can work. The starting point isn't doing more, it's identifying the one task this month that's safest to hand off first.",
+    toolkitLabel: "Delegation Toolkit",
+    toolkitRoute: "/os/delegation",
+  },
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BusinessSnapshot() {
@@ -164,13 +223,27 @@ export default function BusinessSnapshot() {
           </CardContent>
         </Card>
 
-        {/* Calibrated question */}
-        <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5">
-          <p className="text-slate-300 text-sm leading-relaxed">
-            Now that you can see your business on one page — what would change if the biggest time drain
-            on that list was no longer yours to carry?
-          </p>
-        </div>
+        {/* Diagnosis */}
+        {DRAIN_DIAGNOSIS[result.biggestTimeDrain] && (
+          <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-teal-400" />
+              <p className="text-xs font-semibold uppercase tracking-wide text-teal-400">
+                {DRAIN_DIAGNOSIS[result.biggestTimeDrain].dimension} — What This Means
+              </p>
+            </div>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              {DRAIN_DIAGNOSIS[result.biggestTimeDrain].diagnosis}
+            </p>
+            <Button
+              onClick={() => navigate(DRAIN_DIAGNOSIS[result.biggestTimeDrain].toolkitRoute)}
+              className="bg-teal-500 hover:bg-teal-400 text-slate-900 font-semibold"
+            >
+              Open {DRAIN_DIAGNOSIS[result.biggestTimeDrain].toolkitLabel}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3">
