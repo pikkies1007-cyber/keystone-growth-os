@@ -41,11 +41,15 @@ export function SignInForm() {
     setCodeError(null);
     try {
       await verifyEmailCode(email, code);
-      // On success, onAuthStateChange picks up the new session automatically
-      // and AppLayout will swap this form out for the real app. This flag is
-      // just so a genuine success is never silently invisible in the moment
-      // before that swap happens.
+      // Force a hard reload into the app rather than waiting on
+      // onAuthStateChange to propagate through React state. This machine has
+      // shown IndexedDB/storage write errors in the console that can make
+      // that reactive path unreliable -- a full navigation re-reads
+      // whatever session Supabase did manage to persist, instead of hanging
+      // on a listener that may never fire.
       setVerifiedOk(true);
+      window.location.href = "/os";
+      return;
     } catch (err) {
       setCodeError(
         err instanceof Error ? err.message : "That code didn't work — check it and try again."
