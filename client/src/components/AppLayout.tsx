@@ -503,6 +503,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* ── Floating Coach CTA ──────────────────────────────────────────── */}
+      {user && location !== "/os/coach" && (
+        <Link href="/os/coach">
+          <a
+            className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 pl-4 pr-5 py-3.5 rounded-full shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-0.5 group"
+            style={{
+              background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-dark, var(--color-primary)))",
+              boxShadow: "0 8px 24px -6px rgba(45, 139, 122, 0.5)",
+            }}
+            aria-label="Open Business Coach"
+          >
+            <Sparkles className="w-5 h-5 text-white shrink-0 transition-transform group-hover:rotate-12" />
+            <span className="text-sm font-semibold text-white whitespace-nowrap">
+              Ask Coach
+            </span>
+          </a>
+        </Link>
+      )}
     </div>
   );
 }
