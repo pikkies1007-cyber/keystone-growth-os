@@ -1,5 +1,4 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRef, useState } from "react";
@@ -42,30 +41,11 @@ export function SignInForm() {
     setCodeError(null);
     try {
       await verifyEmailCode(email, code);
-      // Confirm the session actually landed in storage before navigating.
-      // verifyOtp() resolving doesn't guarantee the SDK has finished writing
-      // it to storage yet -- reloading immediately after await can outrun
-      // that write (a race condition), which was silently sending people
-      // back to a blank sign-in form despite verification having genuinely
-      // succeeded. Poll briefly for the real, persisted session instead of
-      // assuming it's already there.
-      let confirmed = false;
-      for (let attempt = 0; attempt < 10; attempt++) {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          confirmed = true;
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-      if (!confirmed) {
-        throw new Error(
-          "Sign-in succeeded but the session didn't save in this browser. Try a different browser or clear this site's data, then request a new code."
-        );
-      }
+      // onAuthStateChange (in useAuth) picks up the new session and
+      // AppLayout re-renders automatically. If the backend check fails,
+      // AppLayout now shows that error directly instead of silently
+      // bouncing back here.
       setVerifiedOk(true);
-      window.location.href = "/os";
-      return;
     } catch (err) {
       setCodeError(
         err instanceof Error ? err.message : "That code didn't work — check it and try again."

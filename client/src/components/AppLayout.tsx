@@ -138,7 +138,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const brand = activeBrand;
   const session = useOSSession();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   const isAdmin = user?.role === "admin";
   const isPublicPage = location === "/os/audit";
 
@@ -256,6 +256,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
       );
     }
     if (!user) {
+      if (authError) {
+        return (
+          <div className="min-h-screen flex items-center justify-center p-8" style={{ backgroundColor: "var(--color-bg-base)" }}>
+            <div className="max-w-md text-center space-y-4">
+              <p className="text-sm font-semibold" style={{ color: "var(--color-text-base)" }}>
+                You're signed in with Supabase, but the app couldn't confirm your account.
+              </p>
+              <p className="text-xs font-mono p-3 rounded" style={{ color: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)" }}>
+                {authError.message}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="text-sm underline underline-offset-2"
+                style={{ color: "var(--color-primary)" }}
+              >
+                Reload and try again
+              </button>
+            </div>
+          </div>
+        );
+      }
       return <SignInForm />;
     }
   }
