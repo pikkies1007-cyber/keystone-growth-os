@@ -159,7 +159,7 @@ export function getCoachMessage(params: {
       greeting: `Day ${daysSinceStart} — ${cycle === 1 ? "one month" : `${cycle * 30} days`} in. This is worth pausing for.`,
       body: body + suffix,
       cta: "Review My Goals",
-      ctaRoute: "/goals",
+      ctaRoute: "/os/goals",
       type: "monthly",
     };
   }
@@ -176,7 +176,7 @@ export function getCoachMessage(params: {
       greeting: `Day ${daysSinceStart} — time for a real check-in.`,
       body: body + progressNote,
       cta: "Check My Progress",
-      ctaRoute: "/goals",
+      ctaRoute: "/os/goals",
       type: "weekly",
     };
   }
@@ -191,7 +191,7 @@ export function getCoachMessage(params: {
     greeting: dayGreeting(daysSinceStart),
     body: message + (daysSinceStart > 0 ? suffix : ""),
     cta: "View My Goals",
-    ctaRoute: "/goals",
+    ctaRoute: "/os/goals",
     type: "daily",
   };
 }

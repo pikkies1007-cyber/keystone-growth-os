@@ -89,8 +89,8 @@ function formatBottleneck(key: string): string {
 
 // ── Bottleneck toolkit route helper ──────────────────────────────────────────
 function bottleneckToolkitRoute(key: string): string | null {
-  if (key === "cash") return "/flywheel";
-  if (key === "owner" || key === "staff") return "/delegation";
+  if (key === "cash") return "/os/flywheel";
+  if (key === "owner" || key === "staff") return "/os/delegation";
   return null;
 }
 
