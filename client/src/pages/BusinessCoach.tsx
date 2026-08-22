@@ -4,9 +4,45 @@ import { SignInForm } from "@/components/SignInForm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Sparkles } from "lucide-react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, Fragment } from "react";
+import { Link } from "wouter";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+
+/**
+ * Renders a chat message's text, turning any `[label](/os/path)` markdown-style
+ * links into real, clickable in-app navigation. Intentionally minimal (no full
+ * markdown parser) -- this is model output, not trusted markup, so we only
+ * recognize this one narrow, safe pattern rather than rendering arbitrary HTML.
+ */
+function renderMessageContent(content: string) {
+  const linkPattern = /\[([^\]]+)\]\((\/os\/[a-z0-9\-/]*)\)/gi;
+  const parts: (string | { label: string; href: string })[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = linkPattern.exec(content)) !== null) {
+    if (match.index > lastIndex) parts.push(content.slice(lastIndex, match.index));
+    parts.push({ label: match[1], href: match[2] });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < content.length) parts.push(content.slice(lastIndex));
+
+  return parts.map((part, i) =>
+    typeof part === "string" ? (
+      <Fragment key={i}>{part}</Fragment>
+    ) : (
+      <Link key={i} href={part.href}>
+        <a
+          className="underline font-medium underline-offset-2 hover:opacity-80 transition-opacity"
+          style={{ color: "inherit" }}
+        >
+          {part.label}
+        </a>
+      </Link>
+    )
+  );
+}
 
 export default function BusinessCoach() {
   const { user, loading } = useAuth();
@@ -81,7 +117,7 @@ export default function BusinessCoach() {
                 color: m.role === "user" ? "#0F1923" : "var(--color-text)",
               }}
             >
-              {m.content}
+              {renderMessageContent(m.content)}
             </div>
           </div>
         ))}
