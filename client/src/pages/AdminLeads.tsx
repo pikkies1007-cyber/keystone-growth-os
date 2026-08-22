@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { SignInForm } from "@/components/SignInForm";
+import { useOSSession, notifyOSSessionChange } from "../hooks/useOSSession";
 import {
   ShieldCheck,
   Users,
@@ -18,6 +19,8 @@ import {
   Brain,
   AlertTriangle,
   BarChart3,
+  Unlock,
+  Lock,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -369,11 +372,15 @@ function AuditSessionsTab({ audits }: { audits: AuditResult[] }) {
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <div className="flex gap-1.5 flex-wrap">
-                        {Object.entries(scores).map(([dim, val]) => (
-                          <span key={dim} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
-                            {dim.slice(0, 3).toUpperCase()} {val}
-                          </span>
-                        ))}
+                        {scores && typeof scores === "object" ? (
+                          Object.entries(scores).map(([dim, val]) => (
+                            <span key={dim} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+                              {dim.slice(0, 3).toUpperCase()} {val}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>—</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3"><span className="text-xs" style={{ color: "var(--color-text-subtle)" }}>{formatDate(audit.createdAt)}</span></td>
@@ -393,6 +400,7 @@ function AuditSessionsTab({ audits }: { audits: AuditResult[] }) {
 export default function AdminLeads() {
   const [, navigate] = useLocation();
   const { user, loading } = useAuth();
+  const session = useOSSession();
   const [activeTab, setActiveTab] = useState<"leads" | "audits">("leads");
   const [search, setSearch] = useState("");
   const [filterArchetype, setFilterArchetype] = useState<string>("all");
@@ -484,6 +492,46 @@ export default function AdminLeads() {
           </div>
         </div>
         <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>All captured leads and bottleneck audit sessions across the OS.</p>
+      </div>
+
+      {/* ── Testing: toggle gated toolkits ── */}
+      <div
+        className="rounded-xl p-4 mb-8 flex items-center justify-between gap-4 flex-wrap"
+        style={{ backgroundColor: "var(--color-bg-surface)", border: "1px dashed var(--color-border)" }}
+      >
+        <div className="flex items-center gap-3">
+          {session.isWealthResetComplete ? (
+            <Unlock className="w-4 h-4 shrink-0" style={{ color: "var(--color-primary)" }} />
+          ) : (
+            <Lock className="w-4 h-4 shrink-0" style={{ color: "var(--color-text-subtle)" }} />
+          )}
+          <div>
+            <p className="text-sm font-medium" style={{ color: "var(--color-text-base)" }}>
+              Testing: Pricing Toolkit, Weekly Rhythm &amp; 12-Month Roadmap
+            </p>
+            <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>
+              These normally unlock only after a real Wealth Reset completion. This flips them on for this browser only, for testing — it doesn't affect real users or their data.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            if (session.isWealthResetComplete) {
+              sessionStorage.removeItem("wealthResetComplete");
+            } else {
+              sessionStorage.setItem("wealthResetComplete", "true");
+            }
+            notifyOSSessionChange();
+          }}
+          className="px-4 py-2 rounded-lg text-sm font-medium shrink-0 transition-opacity hover:opacity-90"
+          style={{
+            backgroundColor: session.isWealthResetComplete ? "transparent" : "var(--color-primary)",
+            color: session.isWealthResetComplete ? "var(--color-text-muted)" : "white",
+            border: session.isWealthResetComplete ? "1px solid var(--color-border)" : "none",
+          }}
+        >
+          {session.isWealthResetComplete ? "Lock again" : "Unlock for testing"}
+        </button>
       </div>
 
       {/* ── Summary Stats ── */}

@@ -396,7 +396,7 @@ export default function BottleneckAudit() {
                   {dimensionLabels[result.primaryBottleneck]}
                 </h2>
                 <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-                  How much of your energy is this dimension consuming right now?
+                  Your lowest-scoring dimension below — the one holding the others back.
                 </p>
               </div>
             </div>
@@ -407,9 +407,12 @@ export default function BottleneckAudit() {
             className="rounded-xl p-6 mb-6"
             style={{ backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border)" }}
           >
-            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Five-Dimension Score
             </h3>
+            <p className="text-xs mb-4" style={{ color: "var(--color-text-subtle)" }}>
+              Higher = stronger in that area. Your lowest score is your primary bottleneck, above.
+            </p>
             <div className="space-y-4">
               {(Object.entries(result.scores) as [Dimension, number][]).map(([dim, score]) => (
                 <div key={dim}>
