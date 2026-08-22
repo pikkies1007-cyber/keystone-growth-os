@@ -285,7 +285,7 @@ function LeadDrawer({ lead, onClose }: { lead: EnrichedLead; onClose: () => void
             style={{ backgroundColor: "var(--color-primary)", color: "white" }}
           >
             <Mail className="w-4 h-4" />
-            Email {lead.name.split(" ")[0]}
+            Email {(lead.name ?? "").split(" ")[0] || "this lead"}
           </a>
         </div>
       </div>
