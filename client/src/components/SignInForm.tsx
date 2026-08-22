@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRef, useState } from "react";
@@ -41,12 +42,27 @@ export function SignInForm() {
     setCodeError(null);
     try {
       await verifyEmailCode(email, code);
-      // Force a hard reload into the app rather than waiting on
-      // onAuthStateChange to propagate through React state. This machine has
-      // shown IndexedDB/storage write errors in the console that can make
-      // that reactive path unreliable -- a full navigation re-reads
-      // whatever session Supabase did manage to persist, instead of hanging
-      // on a listener that may never fire.
+      // Confirm the session actually landed in storage before navigating.
+      // verifyOtp() resolving doesn't guarantee the SDK has finished writing
+      // it to storage yet -- reloading immediately after await can outrun
+      // that write (a race condition), which was silently sending people
+      // back to a blank sign-in form despite verification having genuinely
+      // succeeded. Poll briefly for the real, persisted session instead of
+      // assuming it's already there.
+      let confirmed = false;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          confirmed = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      if (!confirmed) {
+        throw new Error(
+          "Sign-in succeeded but the session didn't save in this browser. Try a different browser or clear this site's data, then request a new code."
+        );
+      }
       setVerifiedOk(true);
       window.location.href = "/os";
       return;
