@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export function SignInForm() {
   const { signInWithEmail, verifyEmailCode } = useAuth();
@@ -12,6 +12,12 @@ export function SignInForm() {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
+  const [verifiedOk, setVerifiedOk] = useState(false);
+  // React state updates are asynchronous, so a fast double-trigger (e.g. a
+  // stray duplicate submit event) could call handleVerifyCode a second time
+  // before `verifying`/`disabled` has actually re-rendered. This ref is
+  // checked and set synchronously, so it can't race like that.
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +35,22 @@ export function SignInForm() {
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setVerifying(true);
     setCodeError(null);
     try {
       await verifyEmailCode(email, code);
-      // On success, onAuthStateChange picks up the new session automatically.
+      // On success, onAuthStateChange picks up the new session automatically
+      // and AppLayout will swap this form out for the real app. This flag is
+      // just so a genuine success is never silently invisible in the moment
+      // before that swap happens.
+      setVerifiedOk(true);
     } catch (err) {
       setCodeError(
         err instanceof Error ? err.message : "That code didn't work — check it and try again."
       );
+      submittingRef.current = false;
     } finally {
       setVerifying(false);
     }
@@ -71,7 +84,7 @@ export function SignInForm() {
             </Button>
           </form>
         )}
-        {linkSent && (
+        {linkSent && !verifiedOk && (
           <form onSubmit={handleVerifyCode} className="flex flex-col gap-3 w-full">
             <Input
               type="text"
@@ -99,6 +112,11 @@ export function SignInForm() {
               Use a different email
             </button>
           </form>
+        )}
+        {verifiedOk && (
+          <p className="text-sm text-emerald-500 text-center">
+            Code verified — signing you in...
+          </p>
         )}
       </div>
     </div>
