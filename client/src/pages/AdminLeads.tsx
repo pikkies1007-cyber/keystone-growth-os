@@ -301,7 +301,7 @@ function AuditSessionsTab({ audits }: { audits: AuditResult[] }) {
 
   const filtered = useMemo(() => {
     return audits.filter((a) => {
-      const matchSearch = !search || a.sessionId.toLowerCase().includes(search.toLowerCase());
+      const matchSearch = !search || (a.sessionId ?? "").toLowerCase().includes(search.toLowerCase());
       const matchBottleneck = filterBottleneck === "all" || a.primaryBottleneck === filterBottleneck;
       return matchSearch && matchBottleneck;
     });
@@ -363,7 +363,7 @@ function AuditSessionsTab({ audits }: { audits: AuditResult[] }) {
                 const scores = audit.scores as Record<string, number>;
                 return (
                   <tr key={audit.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid var(--color-border)" : "none", backgroundColor: "var(--color-bg-base)" }}>
-                    <td className="px-4 py-3"><span className="text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>{audit.sessionId.slice(0, 12)}…</span></td>
+                    <td className="px-4 py-3"><span className="text-xs font-mono" style={{ color: "var(--color-text-muted)" }}>{(audit.sessionId ?? "—").slice(0, 12)}…</span></td>
                     <td className="px-4 py-3"><BottleneckBadge bottleneck={audit.primaryBottleneck} /></td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: audit.moneyFrictionDetected ? "oklch(60% 0.18 25 / 0.12)" : "oklch(40% 0 0 / 0.08)", color: audit.moneyFrictionDetected ? "oklch(60% 0.18 25)" : "var(--color-text-subtle)" }}>
@@ -456,14 +456,17 @@ export default function AdminLeads() {
   // ── Filter + sort leads ────────────────────────────────────────────────────
   const filteredLeads = useMemo(() => {
     const filtered = leads.filter((l) => {
-      const matchSearch = !search || l.name.toLowerCase().includes(search.toLowerCase()) || l.email.toLowerCase().includes(search.toLowerCase());
+      const matchSearch =
+        !search ||
+        (l.name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (l.email ?? "").toLowerCase().includes(search.toLowerCase());
       const matchArch = filterArchetype === "all" || l.moneyArchetype === filterArchetype;
       return matchSearch && matchArch;
     });
 
     return [...filtered].sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+      if (sortKey === "name") cmp = (a.name ?? "").localeCompare(b.name ?? "");
       else if (sortKey === "archetype") cmp = (a.moneyArchetype ?? "").localeCompare(b.moneyArchetype ?? "");
       else if (sortKey === "bottleneck") cmp = (a.primaryBottleneck ?? "").localeCompare(b.primaryBottleneck ?? "");
       else cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
