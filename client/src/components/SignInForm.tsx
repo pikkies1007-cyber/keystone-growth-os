@@ -78,13 +78,13 @@ export function SignInForm() {
               inputMode="numeric"
               autoComplete="one-time-code"
               required
-              maxLength={6}
-              placeholder="6-digit code"
+              maxLength={10}
+              placeholder="Enter the code from your email"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
             />
             {codeError && <p className="text-sm text-destructive">{codeError}</p>}
-            <Button type="submit" size="lg" className="w-full shadow-lg hover:shadow-xl transition-all" disabled={verifying || code.length < 6}>
+            <Button type="submit" size="lg" className="w-full shadow-lg hover:shadow-xl transition-all" disabled={verifying || code.length < 6 || code.length > 10}>
               {verifying ? "Verifying..." : "Verify code"}
             </Button>
             <button
