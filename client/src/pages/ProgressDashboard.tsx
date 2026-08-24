@@ -51,6 +51,7 @@ export default function ProgressDashboard() {
           toolkitKey={submission.toolkitKey}
           label={TOOLKIT_LABELS[submission.toolkitKey] ?? submission.toolkitKey}
           completedAt={submission.submittedAt}
+          resultSummary={submission.resultSummary as { messages?: Record<string, string> } | null}
         />
       ))}
     </div>

@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { VoiceOrTextInput } from "@/components/VoiceOrTextInput";
 import { format } from "date-fns";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Copy, Check } from "lucide-react";
 
 // Suggestion text is saved as plain text (e.g. "Open Flywheel Toolkit"), with
 // no link stored alongside it. Map known toolkit labels back to their route
@@ -33,14 +33,23 @@ export function ToolkitProgressCard({
   toolkitKey,
   label,
   completedAt,
+  resultSummary,
 }: {
   toolkitKey: string;
   label: string;
   completedAt: string | Date;
+  resultSummary?: { messages?: Record<string, string> } | null;
 }) {
   const utils = trpc.useUtils();
   const { data: suggestions } = trpc.suggestions.listByToolkit.useQuery({ toolkitKey });
   const { data: entries } = trpc.winsLearnings.listByToolkit.useQuery({ toolkitKey });
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  function copyMessage(key: string, text: string) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1800);
+  }
 
   const [statusError, setStatusError] = useState<string | null>(null);
   const updateStatus = trpc.suggestions.updateStatus.useMutation({
@@ -91,6 +100,34 @@ export function ToolkitProgressCard({
         )}
       </CardHeader>
       <CardContent className="space-y-5">
+        {resultSummary?.messages && Object.keys(resultSummary.messages).length > 0 && (
+          <div className="space-y-2.5">
+            <p className="text-sm font-semibold">Message templates</p>
+            {Object.entries(resultSummary.messages).map(([msgLabel, text]) => (
+              <div key={msgLabel} className="rounded-lg border p-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-muted-foreground">{msgLabel}</p>
+                  <button
+                    onClick={() => copyMessage(msgLabel, text)}
+                    className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+                  >
+                    {copiedKey === msgLabel ? (
+                      <>
+                        <Check className="h-3 w-3" /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" /> Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-sm leading-relaxed">{text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {suggestions && suggestions.length > 0 && (
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-2">

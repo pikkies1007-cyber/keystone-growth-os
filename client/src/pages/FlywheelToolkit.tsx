@@ -185,7 +185,16 @@ export default function FlywheelToolkit() {
     saveSubmission.mutate({
       toolkitKey: "flywheel",
       inputData: { industry: selectedIndustry?.id ?? null, industryLabel: selectedIndustry?.label ?? null, tracker },
-      resultSummary: { industryLabel: selectedIndustry?.label ?? null },
+      resultSummary: {
+        industryLabel: selectedIndustry?.label ?? null,
+        messages: selectedIndustry
+          ? {
+              "Reactivation Message": selectedIndustry.reactivationMsg,
+              "Review Request": selectedIndustry.reviewMsg,
+              "Referral Ask": selectedIndustry.referralMsg,
+            }
+          : undefined,
+      },
       suggestions: selectedIndustry?.plan30,
       syncToGoals: { sessionId: goalSessionId, dimension: "Sales" },
     });
