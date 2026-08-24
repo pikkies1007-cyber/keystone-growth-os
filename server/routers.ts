@@ -2,7 +2,12 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, adminProcedure, protectedProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { getCoachReply } from "./_core/coach";
-import { createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, getAllLeadsAdmin, getAllAuditResults } from "./db";
+import { transcribeAudio } from "./_core/voiceTranscription";
+import {
+  createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, getAllLeadsAdmin, getAllAuditResults,
+  saveToolkitSubmission, getToolkitSubmissionHistory, getLatestSubmissionPerToolkit, updateSuggestionStatus,
+  getSuggestionsByToolkit, addWinLearning, getWinsLearningsByToolkit,
+} from "./db";
 import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment } from "./email";
 import { z } from "zod";
 
@@ -251,12 +256,106 @@ const coachRouter = router({
     }),
 });
 
+// ─── Voice Input ────────────────────────────────────────────────────────────
+
+const voiceRouter = router({
+  transcribe: protectedProcedure
+    .input(z.object({ audioBase64: z.string().min(1), mimeType: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      return transcribeAudio(input);
+    }),
+});
+
+// ─── Toolkit Progress Tracking ──────────────────────────────────────────────
+// Persists toolkit completions (replacing sessionStorage), their suggested
+// next actions, and a wins/learnings log against each.
+
+const toolkitSubmissionsRouter = router({
+  save: protectedProcedure
+    .input(
+      z.object({
+        toolkitKey: z.string().min(1).max(64),
+        inputData: z.record(z.string(), z.any()),
+        resultSummary: z.record(z.string(), z.any()),
+        suggestions: z.array(z.string().min(1)).max(20).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return saveToolkitSubmission(
+        {
+          userId: ctx.user.id,
+          toolkitKey: input.toolkitKey,
+          inputData: input.inputData,
+          resultSummary: input.resultSummary,
+        },
+        input.suggestions
+      );
+    }),
+
+  history: protectedProcedure
+    .input(z.object({ toolkitKey: z.string().min(1).max(64) }))
+    .query(async ({ ctx, input }) => {
+      return getToolkitSubmissionHistory(ctx.user.id, input.toolkitKey);
+    }),
+
+  listCompleted: protectedProcedure.query(async ({ ctx }) => {
+    return getLatestSubmissionPerToolkit(ctx.user.id);
+  }),
+});
+
+const suggestionsRouter = router({
+  updateStatus: protectedProcedure
+    .input(z.object({ id: z.number().int(), status: z.enum(["not_started", "in_progress", "done"]) }))
+    .mutation(async ({ ctx, input }) => {
+      await updateSuggestionStatus(input.id, ctx.user.id, input.status);
+      return { success: true } as const;
+    }),
+
+  listByToolkit: protectedProcedure
+    .input(z.object({ toolkitKey: z.string().min(1).max(64) }))
+    .query(async ({ ctx, input }) => {
+      return getSuggestionsByToolkit(ctx.user.id, input.toolkitKey);
+    }),
+});
+
+const winsLearningsRouter = router({
+  add: protectedProcedure
+    .input(
+      z.object({
+        toolkitKey: z.string().min(1).max(64),
+        submissionId: z.number().int().optional(),
+        type: z.enum(["win", "learning"]),
+        content: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await addWinLearning({
+        userId: ctx.user.id,
+        toolkitKey: input.toolkitKey,
+        submissionId: input.submissionId ?? null,
+        type: input.type,
+        content: input.content,
+      });
+      return { success: true } as const;
+    }),
+
+  listByToolkit: protectedProcedure
+    .input(z.object({ toolkitKey: z.string().min(1).max(64) }))
+    .query(async ({ ctx, input }) => {
+      return getWinsLearningsByToolkit(ctx.user.id, input.toolkitKey);
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
   system: systemRouter,
   admin: adminRouter,
   coach: coachRouter,
+  voice: voiceRouter,
+  toolkitSubmissions: toolkitSubmissionsRouter,
+  suggestions: suggestionsRouter,
+  winsLearnings: winsLearningsRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     // Session lives client-side in the Supabase SDK (localStorage). Signing out

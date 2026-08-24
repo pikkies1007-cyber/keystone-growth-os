@@ -19,6 +19,7 @@ import {
   Lock,
   ShieldCheck,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignInForm } from "@/components/SignInForm";
@@ -49,6 +50,12 @@ const navItems: NavItem[] = [
     path: "/os/coach",
     icon: Sparkles,
     description: "Ask anything, anytime",
+  },
+  {
+    label: "Progress",
+    path: "/os/progress",
+    icon: BarChart3,
+    description: "Toolkits, actions & wins",
   },
   // Business Snapshot moved to top — it feeds the Audit
   {

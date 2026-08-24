@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { VoiceOrTextInput } from "@/components/VoiceOrTextInput";
+import { trpc } from "@/lib/trpc";
 import {
   Building2,
   Users,
@@ -146,6 +148,8 @@ export default function BusinessSnapshot() {
   const totalSteps = 6;
   const progress = Math.round((step / totalSteps) * 100);
 
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+
   function handleComplete() {
     const snapshot: SnapshotResult = {
       businessName: businessName.trim() || "Your Business",
@@ -159,6 +163,18 @@ export default function BusinessSnapshot() {
     sessionStorage.setItem("businessSnapshot", JSON.stringify(snapshot));
     setResult(snapshot);
     setStep(totalSteps);
+
+    // Persist to the database too (in addition to sessionStorage) so it
+    // shows up in Progress tracking and survives across devices/sessions.
+    // Fire-and-forget: a failure here shouldn't block the user seeing their
+    // result, which is already saved locally.
+    const diagnosis = DRAIN_DIAGNOSIS[biggestTimeDrain];
+    saveSubmission.mutate({
+      toolkitKey: "business-snapshot",
+      inputData: { businessName: snapshot.businessName, revenueRange, staffCount, primaryRevenue, biggestTimeDrain, oneChange: snapshot.oneChange },
+      resultSummary: { dimension: diagnosis?.dimension ?? null, diagnosis: diagnosis?.diagnosis ?? null },
+      suggestions: diagnosis ? [`Open ${diagnosis.toolkitLabel}`] : undefined,
+    });
   }
 
   function handleRetake() {
@@ -480,13 +496,13 @@ export default function BusinessSnapshot() {
               Write it in your own words. There is no wrong answer — this is your snapshot, not a test.
             </p>
           </div>
-          <textarea
+          <VoiceOrTextInput
             value={oneChange}
-            onChange={(e) => setOneChange(e.target.value)}
+            onChange={setOneChange}
             placeholder="e.g. I would stop doing all the admin myself and hire someone to handle it..."
             rows={4}
-            className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 transition-colors resize-none"
-            autoFocus
+            textareaClassName="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 transition-colors resize-none"
+            buttonClassName="border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white"
           />
           <p className="text-xs text-slate-500">This field is optional — you can skip it if you prefer.</p>
         </div>

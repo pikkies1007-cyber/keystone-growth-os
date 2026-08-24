@@ -117,3 +117,52 @@ export const lmsEnrolments = pgTable("lms_enrolments", {
 
 export type LmsEnrolment = typeof lmsEnrolments.$inferSelect;
 export type InsertLmsEnrolment = typeof lmsEnrolments.$inferInsert;
+
+// ─── Toolkit Progress Tracking ──────────────────────────────────────────────
+// Persists toolkit completions (replacing sessionStorage), their suggested
+// next actions, and a wins/learnings log against each. Additive only.
+
+export const suggestionStatusEnum = pgEnum("suggestion_status", ["not_started", "in_progress", "done"]);
+export const winLearningTypeEnum = pgEnum("win_learning_type", ["win", "learning"]);
+
+/** One row per toolkit completion — never overwritten, so history/comparison is just a date filter. */
+export const toolkitSubmissions = pgTable("toolkit_submissions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  toolkitKey: varchar("toolkitKey", { length: 64 }).notNull(),
+  inputData: jsonb("inputData").notNull(),
+  resultSummary: jsonb("resultSummary").notNull(),
+  submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+});
+
+export type ToolkitSubmission = typeof toolkitSubmissions.$inferSelect;
+export type InsertToolkitSubmission = typeof toolkitSubmissions.$inferInsert;
+
+/** The suggested next actions a submission produced, each with its own execution status. */
+export const toolkitSuggestions = pgTable("toolkit_suggestions", {
+  id: serial("id").primaryKey(),
+  submissionId: integer("submissionId").notNull(),
+  userId: integer("userId").notNull(),
+  toolkitKey: varchar("toolkitKey", { length: 64 }).notNull(),
+  suggestionText: text("suggestionText").notNull(),
+  status: suggestionStatusEnum("status").default("not_started").notNull(),
+  statusUpdatedAt: timestamp("statusUpdatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ToolkitSuggestion = typeof toolkitSuggestions.$inferSelect;
+export type InsertToolkitSuggestion = typeof toolkitSuggestions.$inferInsert;
+
+/** Freeform wins/learnings logged against a toolkit — voice or text, any time. */
+export const winsLearnings = pgTable("wins_learnings", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  toolkitKey: varchar("toolkitKey", { length: 64 }).notNull(),
+  submissionId: integer("submissionId"),
+  type: winLearningTypeEnum("type").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WinLearning = typeof winsLearnings.$inferSelect;
+export type InsertWinLearning = typeof winsLearnings.$inferInsert;
