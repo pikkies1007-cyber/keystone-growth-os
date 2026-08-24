@@ -123,7 +123,21 @@ export default function GoalDashboard() {
   const archetypeInfo = archetype ? archetypeDisplay[archetype] : null;
   const [goals, setGoals] = useState<Goal[]>(() => {
     const saved = localStorage.getItem("keystoneGoals");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed: Goal[] = JSON.parse(saved);
+      // Self-heal: collapse any duplicate titles that got saved into
+      // localStorage before duplicate-prevention existed. Keeps the first
+      // occurrence of each title, preferring one that's completed and one
+      // that has a dbId (so sync isn't lost in the cleanup).
+      const byTitle = new Map<string, Goal>();
+      for (const g of parsed) {
+        const existing = byTitle.get(g.text);
+        if (!existing || (!existing.dbId && g.dbId) || (!existing.completed && g.completed)) {
+          byTitle.set(g.text, g);
+        }
+      }
+      return Array.from(byTitle.values());
+    }
     const auditRaw = sessionStorage.getItem("auditResult");
     const blueprintRaw = sessionStorage.getItem("blueprintResult");
     const identityRaw = sessionStorage.getItem("moneyIdentityResult");
@@ -163,8 +177,9 @@ export default function GoalDashboard() {
     if (!dbGoals?.length) return;
     setGoals((prev) => {
       const existingDbIds = new Set(prev.filter((g) => g.dbId).map((g) => g.dbId));
+      const existingTitles = new Set(prev.map((g) => g.text));
       const toAdd: Goal[] = dbGoals
-        .filter((row) => !existingDbIds.has(row.id))
+        .filter((row) => !existingDbIds.has(row.id) && !existingTitles.has(row.title))
         .map((row) => ({
           id: `db-${row.id}`,
           dbId: row.id,
