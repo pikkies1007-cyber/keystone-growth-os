@@ -361,9 +361,17 @@ export default function BusinessSnapshot() {
     return false;
   };
 
+  const [advancing, setAdvancing] = useState(false);
   function handleNext() {
-    if (step < totalSteps) setStep(step + 1);
-    else handleComplete();
+    if (advancing) return;
+    setAdvancing(true);
+    setTimeout(() => setAdvancing(false), 400);
+
+    if (step < totalSteps) {
+      setStep((s) => s + 1);
+    } else {
+      handleComplete();
+    }
   }
 
   return (
@@ -534,7 +542,7 @@ export default function BusinessSnapshot() {
         )}
         <Button
           onClick={handleNext}
-          disabled={!canProceed()}
+          disabled={!canProceed() || advancing}
           className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-900 font-semibold disabled:opacity-40"
         >
           {step === totalSteps ? "Build My Snapshot" : "Next"}
