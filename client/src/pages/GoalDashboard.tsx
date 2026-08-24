@@ -118,6 +118,7 @@ export default function GoalDashboard() {
   const sessionId = useGoalSessionId();
   const createGoalMutation = trpc.goals.create.useMutation();
   const updateGoalMutation = trpc.goals.updateStatus.useMutation();
+  const { data: dbGoals } = trpc.goals.list.useQuery({ sessionId });
   const archetype = session.moneyIdentity?.archetype ?? null;
   const archetypeInfo = archetype ? archetypeDisplay[archetype] : null;
   const [goals, setGoals] = useState<Goal[]>(() => {
@@ -153,6 +154,32 @@ export default function GoalDashboard() {
   useEffect(() => {
     localStorage.setItem("keystoneGoals", JSON.stringify(goals));
   }, [goals]);
+
+  // Merge in any real database goals (e.g. synced automatically from a
+  // completed toolkit like Flywheel) that aren't already represented
+  // locally. Matched by dbId so this never re-adds or duplicates a goal
+  // that's already been merged once.
+  useEffect(() => {
+    if (!dbGoals?.length) return;
+    setGoals((prev) => {
+      const existingDbIds = new Set(prev.filter((g) => g.dbId).map((g) => g.dbId));
+      const toAdd: Goal[] = dbGoals
+        .filter((row) => !existingDbIds.has(row.id))
+        .map((row) => ({
+          id: `db-${row.id}`,
+          dbId: row.id,
+          text: row.title,
+          dimension: (row.dimension ?? "systems").toLowerCase(),
+          completed: row.status === "completed",
+          // Toolkit-synced action plans (e.g. Flywheel's 30-day plan) are all
+          // near-term work -- bucket them into Month 1 regardless of their
+          // internal week number, which is already visible in the title itself.
+          week: 1,
+        }));
+      if (toAdd.length === 0) return prev;
+      return [...prev, ...toAdd];
+    });
+  }, [dbGoals]);
 
   const completedCount = goals.filter((g) => g.completed).length;
   const totalCount = goals.length;
