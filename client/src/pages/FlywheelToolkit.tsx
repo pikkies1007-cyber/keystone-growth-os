@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { ArrowRight, ArrowLeft, RefreshCw, Star, Users, Repeat, TrendingUp, Copy, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -159,12 +160,23 @@ export default function FlywheelToolkit() {
     setTimeout(() => setCopied(null), 2000);
   }
 
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+
   function handleComplete() {
     sessionStorage.setItem(
       "flywheelResult",
       JSON.stringify({ industry: selectedIndustry?.id, completedAt: Date.now() })
     );
     setDone(true);
+
+    // Fire-and-forget: shows up on /os/progress even if this fails, since
+    // the sessionStorage result above already covers the immediate UX.
+    saveSubmission.mutate({
+      toolkitKey: "flywheel",
+      inputData: { industry: selectedIndustry?.id ?? null, industryLabel: selectedIndustry?.label ?? null, tracker },
+      resultSummary: { industryLabel: selectedIndustry?.label ?? null },
+      suggestions: selectedIndustry?.plan30,
+    });
   }
 
   if (done) {
