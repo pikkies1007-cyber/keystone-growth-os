@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useGoalSessionId } from "@/lib/goalSession";
 import { ArrowRight, ArrowLeft, RefreshCw, Star, Users, Repeat, TrendingUp, Copy, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -161,15 +162,7 @@ export default function FlywheelToolkit() {
   }
 
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
-
-  function getKeystoneSessionId() {
-    let id = sessionStorage.getItem("keystoneSessionId");
-    if (!id) {
-      id = `anon-${Date.now()}`;
-      sessionStorage.setItem("keystoneSessionId", id);
-    }
-    return id;
-  }
+  const goalSessionId = useGoalSessionId();
 
   function handleComplete() {
     sessionStorage.setItem(
@@ -185,7 +178,7 @@ export default function FlywheelToolkit() {
       inputData: { industry: selectedIndustry?.id ?? null, industryLabel: selectedIndustry?.label ?? null, tracker },
       resultSummary: { industryLabel: selectedIndustry?.label ?? null },
       suggestions: selectedIndustry?.plan30,
-      syncToGoals: { sessionId: getKeystoneSessionId(), dimension: "Sales" },
+      syncToGoals: { sessionId: goalSessionId, dimension: "Sales" },
     });
   }
 

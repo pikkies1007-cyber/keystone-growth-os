@@ -5,6 +5,7 @@ import { Target, Plus, CheckCircle2, Circle, ArrowRight, Trash2, Calendar, Brain
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { useOSSession, archetypeDisplay, archetypeGoalPriority, type MoneyArchetype } from "../hooks/useOSSession";
+import { useGoalSessionId } from "@/lib/goalSession";
 
 interface Goal {
   id: string;
@@ -112,12 +113,9 @@ export default function GoalDashboard() {
   const [, navigate] = useLocation();
   const brand = activeBrand;
   const session = useOSSession();
-  // Stable session ID for backend sync
-  const sessionId = (() => {
-    let id = sessionStorage.getItem("keystoneSessionId");
-    if (!id) { id = `anon-${Date.now()}`; sessionStorage.setItem("keystoneSessionId", id); }
-    return id;
-  })();
+  // Stable session ID for backend sync - tied to the signed-in user, not a
+  // random per-tab value, so goals show up consistently across tabs/sessions.
+  const sessionId = useGoalSessionId();
   const createGoalMutation = trpc.goals.create.useMutation();
   const updateGoalMutation = trpc.goals.updateStatus.useMutation();
   const archetype = session.moneyIdentity?.archetype ?? null;

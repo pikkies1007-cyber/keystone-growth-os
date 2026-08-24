@@ -108,7 +108,7 @@ export function ToolkitProgressCard({
                   <Checkbox
                     checked={s.status === "done"}
                     disabled={updateStatus.isPending}
-                    className="mt-0.5 h-5 w-5"
+                    className="mt-0.5 h-5 w-5 border-2 border-primary/60 data-[state=unchecked]:bg-background"
                     onCheckedChange={(checked) =>
                       updateStatus.mutate({ id: s.id, status: checked ? "done" : "not_started" })
                     }
