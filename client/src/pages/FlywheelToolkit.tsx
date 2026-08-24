@@ -201,9 +201,23 @@ export default function FlywheelToolkit() {
               {selectedIndustry?.label}
             </span>
           </p>
-          <p className="text-sm mb-8 max-w-md mx-auto" style={{ color: "var(--color-text-muted)" }}>
+          <p className="text-sm mb-4 max-w-md mx-auto" style={{ color: "var(--color-text-muted)" }}>
             How many of your past customers have heard from you in the last 30 days? That number is about to change.
           </p>
+
+          {/* Visible save status, instead of a silent fire-and-forget */}
+          <div className="mb-6 text-sm">
+            {saveSubmission.isPending && (
+              <span style={{ color: "var(--color-text-muted)" }}>Saving to your Progress page…</span>
+            )}
+            {saveSubmission.isSuccess && (
+              <span style={{ color: "var(--color-primary)" }}>✓ Saved — check your Progress page</span>
+            )}
+            {saveSubmission.isError && (
+              <span className="text-destructive">Couldn't save to Progress: {saveSubmission.error.message}</span>
+            )}
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => navigate("/os/goals")}
