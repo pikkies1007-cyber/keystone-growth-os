@@ -12,10 +12,19 @@ const TOOLKIT_LABELS: Record<string, string> = {
 };
 
 export default function ProgressDashboard() {
-  const { data: completed, isLoading } = trpc.toolkitSubmissions.listCompleted.useQuery();
+  const { data: completed, isLoading, error } = trpc.toolkitSubmissions.listCompleted.useQuery();
 
   if (isLoading) {
     return <div className="p-8 text-muted-foreground">Loading your progress…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center max-w-md mx-auto space-y-3">
+        <p className="text-sm font-semibold text-destructive">Couldn't load your progress</p>
+        <p className="text-xs font-mono p-3 rounded bg-muted text-muted-foreground">{error.message}</p>
+      </div>
+    );
   }
 
   if (!completed?.length) {
