@@ -154,6 +154,19 @@ export async function saveToolkitSubmission(
 
   if (suggestionTexts?.length) {
     if (goalSyncOptions) {
+      // Redoing a toolkit should replace its synced goals, not add another
+      // full duplicate batch on top of every previous attempt.
+      const previousLinked = await db
+        .select({ linkedGoalItemId: toolkitSuggestions.linkedGoalItemId })
+        .from(toolkitSuggestions)
+        .where(and(eq(toolkitSuggestions.userId, data.userId), eq(toolkitSuggestions.toolkitKey, data.toolkitKey)));
+      const idsToDelete = previousLinked.map((r) => r.linkedGoalItemId).filter((id): id is number => id !== null);
+      if (idsToDelete.length > 0) {
+        for (const goalId of idsToDelete) {
+          await db.delete(goalItems).where(eq(goalItems.id, goalId));
+        }
+      }
+
       // Create the real goal first, then the suggestion row links to it.
       for (const suggestionText of suggestionTexts) {
         const [goal] = await db
