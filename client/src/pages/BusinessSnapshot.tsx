@@ -193,14 +193,26 @@ export default function BusinessSnapshot() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5 text-teal-400" />
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Business Snapshot Complete</h1>
+              <p className="text-sm text-slate-400">
+                Completed {new Date(result.completedAt).toLocaleDateString("en-ZA", { day: "numeric", month: "short", year: "numeric" })}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">Business Snapshot Complete</h1>
-            <p className="text-sm text-slate-400">Your one-page business profile</p>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetake}
+            className="border-slate-600 text-slate-300 hover:bg-slate-700 shrink-0"
+          >
+            Start a new snapshot
+          </Button>
         </div>
 
         {/* Snapshot card */}
@@ -283,7 +295,7 @@ export default function BusinessSnapshot() {
           onClick={handleRetake}
           className="text-xs text-slate-500 hover:text-slate-400 underline underline-offset-2 transition-colors"
         >
-          Update my snapshot
+          Start over completely (clears all answers)
         </button>
       </div>
     );

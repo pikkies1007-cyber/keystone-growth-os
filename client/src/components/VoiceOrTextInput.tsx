@@ -36,6 +36,12 @@ export function VoiceOrTextInput({
   const chunksRef = useRef<Blob[]>([]);
   const transcribe = trpc.voice.transcribe.useMutation();
 
+  // Always reflects the latest `value` prop, so the async onstop handler
+  // below never appends onto a stale, closed-over value from whenever
+  // recording happened to start.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
   const startRecording = async () => {
     setMicError(null);
     try {
@@ -60,7 +66,8 @@ export function VoiceOrTextInput({
 
           const result = await transcribe.mutateAsync({ audioBase64: base64, mimeType: "audio/webm" });
           if (result.text) {
-            onChange(value ? `${value} ${result.text}` : result.text);
+            const current = valueRef.current;
+            onChange(current ? `${current} ${result.text}` : result.text);
           }
         } catch (err) {
           setMicError(err instanceof Error ? err.message : "Couldn't transcribe that — try typing instead.");
