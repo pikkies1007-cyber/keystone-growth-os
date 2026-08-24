@@ -210,7 +210,7 @@ export default function FlywheelToolkit() {
               className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold"
               style={{ backgroundColor: "var(--color-primary)", color: "white" }}
             >
-              Add to My 90-Day Goals <ArrowRight className="w-4 h-4" />
+              View My Goals <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => navigate("/os")}
