@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, ArrowLeft, Users, CheckCircle2, ClipboardList, Target, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { trpc } from "@/lib/trpc";
+import { useGoalSessionId } from "@/lib/goalSession";
 
 // ── Assessment Questions ─────────────────────────────────────────────────────
 interface AssessQuestion {
@@ -146,6 +148,8 @@ export default function DelegationToolkit() {
   const [checkedItems, setCheckedItems] = useState<boolean[]>(Array(CHECKLIST_ITEMS.length).fill(false));
   const [firstProject, setFirstProject] = useState("");
   const [done, setDone] = useState(false);
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+  const goalSessionId = useGoalSessionId();
 
   function handleAssessAnswer(qId: string, value: number) {
     setAssessAnswers((prev) => ({ ...prev, [qId]: value }));
@@ -807,7 +811,16 @@ export default function DelegationToolkit() {
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
               <button
-                onClick={() => setDone(true)}
+                onClick={() => {
+                  setDone(true);
+                  saveSubmission.mutate({
+                    toolkitKey: "delegation",
+                    inputData: { firstProject: firstProject || brief.taskName, assessLevel: assessResult?.level ?? null },
+                    resultSummary: { firstProject: firstProject || brief.taskName },
+                    suggestions: CHECKLIST_ITEMS,
+                    syncToGoals: { sessionId: goalSessionId, dimension: "Owner Behaviour" },
+                  });
+                }}
                 className="flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold"
                 style={{ backgroundColor: "var(--color-accent)", color: "var(--color-bg-base)" }}
               >

@@ -19,6 +19,8 @@ import {
   Lock,
 } from "lucide-react";
 import { useOSSession } from "../hooks/useOSSession";
+import { trpc } from "@/lib/trpc";
+import { useGoalSessionId } from "@/lib/goalSession";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,6 +91,25 @@ export default function WeeklyRhythm() {
   const session = useOSSession();
   const [activeTab, setActiveTab] = useState<"plan" | "review">("plan");
 
+  // All hooks must run on every render regardless of the lock-gate branch
+  // below -- moved above it to fix the same React error #310 pattern
+  // (hooks skipped/added inconsistently between renders) already found and
+  // fixed elsewhere today.
+  const monday = getMondayOfWeek(new Date());
+  const weekKey = getWeekKey(monday);
+  const [plan, setPlan] = useState<WeekPlan>(() => {
+    const raw = sessionStorage.getItem(`weekPlan_${weekKey}`);
+    return raw ? JSON.parse(raw) : emptyWeek(monday);
+  });
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+  const goalSessionId = useGoalSessionId();
+  const [tracked, setTracked] = useState(false);
+
+  // Persist on every change
+  useEffect(() => {
+    sessionStorage.setItem(`weekPlan_${weekKey}`, JSON.stringify(plan));
+  }, [plan, weekKey]);
+
   // ── Lock gate ──────────────────────────────────────────────────────────────
   if (!session.isWeeklyRhythmUnlocked) {
     return (
@@ -149,18 +170,18 @@ export default function WeeklyRhythm() {
   }
   // ── End lock gate ──────────────────────────────────────────────────────────
 
-  const monday = getMondayOfWeek(new Date());
-  const weekKey = getWeekKey(monday);
-
-  const [plan, setPlan] = useState<WeekPlan>(() => {
-    const raw = sessionStorage.getItem(`weekPlan_${weekKey}`);
-    return raw ? JSON.parse(raw) : emptyWeek(monday);
-  });
-
-  // Persist on every change
-  useEffect(() => {
-    sessionStorage.setItem(`weekPlan_${weekKey}`, JSON.stringify(plan));
-  }, [plan, weekKey]);
+  function trackThisWeek() {
+    const priorities = plan.mondayPriorities.filter((p) => p.trim());
+    if (priorities.length === 0) return;
+    saveSubmission.mutate({
+      toolkitKey: "weekly-rhythm",
+      inputData: { weekStart: plan.weekStart },
+      resultSummary: { weekStart: plan.weekStart, priorityCount: priorities.length },
+      suggestions: priorities,
+      syncToGoals: { sessionId: goalSessionId, dimension: "Systems" },
+    });
+    setTracked(true);
+  }
 
   // ── Monday priorities ──────────────────────────────────────────────────────
   function updatePriority(i: number, val: string) {
@@ -296,6 +317,20 @@ export default function WeeklyRhythm() {
                   <p className="text-xs text-teal-400">
                     {prioritiesSet} of 3 priorities set for this week
                   </p>
+                )}
+                {prioritiesSet > 0 && (
+                  <button
+                    onClick={trackThisWeek}
+                    disabled={saveSubmission.isPending}
+                    className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                    style={{
+                      backgroundColor: tracked ? "transparent" : "var(--color-primary)",
+                      color: tracked ? "var(--color-text-muted)" : "white",
+                      border: tracked ? "1px solid var(--color-border-light)" : "none",
+                    }}
+                  >
+                    {tracked ? "✓ Tracked in Progress & Goals" : saveSubmission.isPending ? "Tracking…" : "Track this week's priorities"}
+                  </button>
                 )}
               </CardContent>
             </Card>

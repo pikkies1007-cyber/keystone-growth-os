@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useOSSession } from "@/hooks/useOSSession";
+import { trpc } from "@/lib/trpc";
+import { useGoalSessionId } from "@/lib/goalSession";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -120,6 +122,25 @@ export default function FinancialRoadmap() {
   const [, navigate] = useLocation();
   const session = useOSSession();
 
+  // All hooks must run on every render regardless of the lock-gate branch
+  // below -- moved above it to fix the same React error #310 pattern
+  // (hooks skipped/added inconsistently between renders) already found and
+  // fixed elsewhere today.
+  const [commitments, setCommitments] = useState<RoadmapCommitments>(() => {
+    const raw = sessionStorage.getItem("roadmapCommitments");
+    if (raw) {
+      try { return JSON.parse(raw); } catch { /* ignore */ }
+    }
+    return {
+      milestone1: "", milestone2: "", milestone3: "",
+      nonNeg1: "", nonNeg2: "", nonNeg3: "",
+      redFlag: "", accountabilityPartner: "", completedAt: "",
+    };
+  });
+  const [saved, setSaved] = useState(false);
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+  const goalSessionId = useGoalSessionId();
+
   // ── Lock gate ──────────────────────────────────────────────────────────────
   if (!session.isRoadmapUnlocked) {
     return (
@@ -183,20 +204,6 @@ export default function FinancialRoadmap() {
   const archetype = session.moneyIdentity?.archetype ?? null;
   const primaryBottleneck = session.auditResult?.primaryBottleneck ?? null;
 
-  const [commitments, setCommitments] = useState<RoadmapCommitments>(() => {
-    const raw = sessionStorage.getItem("roadmapCommitments");
-    if (raw) {
-      try { return JSON.parse(raw); } catch { /* ignore */ }
-    }
-    return {
-      milestone1: "", milestone2: "", milestone3: "",
-      nonNeg1: "", nonNeg2: "", nonNeg3: "",
-      redFlag: "", accountabilityPartner: "", completedAt: "",
-    };
-  });
-
-  const [saved, setSaved] = useState(false);
-
   const update = (key: keyof RoadmapCommitments, value: string) => {
     setCommitments((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
@@ -207,6 +214,25 @@ export default function FinancialRoadmap() {
     sessionStorage.setItem("roadmapCommitments", JSON.stringify(updated));
     setCommitments(updated);
     setSaved(true);
+
+    const suggestions = [
+      updated.milestone1 && `Month 1-3: ${updated.milestone1}`,
+      updated.milestone2 && `Month 4-8: ${updated.milestone2}`,
+      updated.milestone3 && `Month 9-12: ${updated.milestone3}`,
+      updated.nonNeg1 && `Non-negotiable: ${updated.nonNeg1}`,
+      updated.nonNeg2 && `Non-negotiable: ${updated.nonNeg2}`,
+      updated.nonNeg3 && `Non-negotiable: ${updated.nonNeg3}`,
+    ].filter((s): s is string => Boolean(s));
+
+    if (suggestions.length > 0) {
+      saveSubmission.mutate({
+        toolkitKey: "roadmap",
+        inputData: { archetype, primaryBottleneck },
+        resultSummary: { milestoneCount: suggestions.length },
+        suggestions,
+        syncToGoals: { sessionId: goalSessionId, dimension: "Cash Flow" },
+      });
+    }
   };
 
   const isComplete = commitments.completedAt !== "";

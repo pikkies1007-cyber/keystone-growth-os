@@ -17,6 +17,8 @@ import {
   Lock,
 } from "lucide-react";
 import { useOSSession } from "../hooks/useOSSession";
+import { trpc } from "@/lib/trpc";
+import { useGoalSessionId } from "@/lib/goalSession";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,6 +109,22 @@ export default function PricingToolkit() {
   const session = useOSSession();
   const [step, setStep] = useState(0);
 
+  // All hooks must run on every render regardless of the lock-gate branch
+  // below -- these used to be declared after that early return, which is
+  // the exact "React error #310" pattern (hooks skipped/added inconsistently
+  // between renders) already found and fixed on the Admin page earlier.
+  const [result, setResult] = useState<PricingResult | null>(() => {
+    const raw = sessionStorage.getItem("pricingResult");
+    return raw ? JSON.parse(raw) : null;
+  });
+  const [monthlyRevenue, setMonthlyRevenue] = useState("");
+  const [monthlyCosts, setMonthlyCosts] = useState("");
+  const [avgSaleValue, setAvgSaleValue] = useState("");
+  const [hoursPerMonth, setHoursPerMonth] = useState("");
+  const [desiredTakeHome, setDesiredTakeHome] = useState("");
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+  const goalSessionId = useGoalSessionId();
+
   // ── Lock gate ──────────────────────────────────────────────────────────────
   if (!session.isPricingUnlocked) {
     return (
@@ -167,17 +185,6 @@ export default function PricingToolkit() {
     );
   }
   // ── End lock gate ──────────────────────────────────────────────────────────
-  const [result, setResult] = useState<PricingResult | null>(() => {
-    const raw = sessionStorage.getItem("pricingResult");
-    return raw ? JSON.parse(raw) : null;
-  });
-
-  // Input state — stored as strings for input fields
-  const [monthlyRevenue, setMonthlyRevenue] = useState("");
-  const [monthlyCosts, setMonthlyCosts] = useState("");
-  const [avgSaleValue, setAvgSaleValue] = useState("");
-  const [hoursPerMonth, setHoursPerMonth] = useState("");
-  const [desiredTakeHome, setDesiredTakeHome] = useState("");
 
   const totalSteps = 5;
   const progress = Math.round((step / totalSteps) * 100);
@@ -199,6 +206,19 @@ export default function PricingToolkit() {
     sessionStorage.setItem("pricingResult", JSON.stringify(full));
     setResult(full);
     setStep(totalSteps + 1);
+
+    saveSubmission.mutate({
+      toolkitKey: "pricing",
+      inputData: { monthlyRevenue: parseNum(monthlyRevenue), monthlyCosts: parseNum(monthlyCosts), avgSaleValue: parseNum(avgSaleValue) },
+      resultSummary: { profitMargin: r.profitMargin, breakEvenSales: r.breakEvenSales },
+      suggestions: [
+        r.profitMargin < 15
+          ? "Raise prices by at least 10% on your lowest-margin product or service"
+          : "Review pricing on your lowest-margin product or service",
+        "Set a monthly reminder to revisit these numbers as costs change",
+      ],
+      syncToGoals: { sessionId: goalSessionId, dimension: "Cash Flow" },
+    });
   }
 
   function handleRetake() {
