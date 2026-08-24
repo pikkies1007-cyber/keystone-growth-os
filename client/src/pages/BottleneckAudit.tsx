@@ -270,10 +270,12 @@ export default function BottleneckAudit() {
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
 
-  // Mirrors Dashboard.tsx's bottleneckToolkitRoute -- only these two
-  // dimensions currently have a dedicated toolkit to send someone to.
+  // Mirrors Dashboard.tsx's bottleneckToolkitRoute, plus Sales -> Flywheel
+  // (consistent with how Business Snapshot already treats a sales/customer-
+  // acquisition problem as a Flywheel fit). Only "systems" has no dedicated
+  // toolkit yet.
   function bottleneckCta(bottleneck: string): { label: string; route: string } | null {
-    if (bottleneck === "cash") return { label: "Open Flywheel Toolkit", route: "/os/flywheel" };
+    if (bottleneck === "cash" || bottleneck === "sales") return { label: "Open Flywheel Toolkit", route: "/os/flywheel" };
     if (bottleneck === "owner" || bottleneck === "staff") return { label: "Open Delegation Toolkit", route: "/os/delegation" };
     return null;
   }
