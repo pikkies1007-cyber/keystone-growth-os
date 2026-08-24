@@ -150,10 +150,19 @@ const FLYWHEEL_STAGES = [
 export default function FlywheelToolkit() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState(1);
-  const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(() => {
+    const raw = sessionStorage.getItem("flywheelResult");
+    if (!raw) return null;
+    try {
+      const saved = JSON.parse(raw);
+      return INDUSTRIES.find((i) => i.id === saved.industry) ?? null;
+    } catch {
+      return null;
+    }
+  });
   const [copied, setCopied] = useState<CopiedKey>(null);
   const [tracker, setTracker] = useState({ reviews: 0, referrals: 0, reactivations: 0 });
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(() => !!sessionStorage.getItem("flywheelResult"));
 
   function copyText(text: string, key: CopiedKey) {
     navigator.clipboard.writeText(text).catch(() => {});

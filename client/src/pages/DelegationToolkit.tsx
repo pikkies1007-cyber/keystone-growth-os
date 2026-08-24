@@ -147,7 +147,7 @@ export default function DelegationToolkit() {
   });
   const [checkedItems, setCheckedItems] = useState<boolean[]>(Array(CHECKLIST_ITEMS.length).fill(false));
   const [firstProject, setFirstProject] = useState("");
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(() => sessionStorage.getItem("delegationCompleted") === "true");
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
 
@@ -813,6 +813,7 @@ export default function DelegationToolkit() {
               <button
                 onClick={() => {
                   setDone(true);
+                  sessionStorage.setItem("delegationCompleted", "true");
                   saveSubmission.mutate({
                     toolkitKey: "delegation",
                     inputData: { firstProject: firstProject || brief.taskName, assessLevel: assessResult?.level ?? null },

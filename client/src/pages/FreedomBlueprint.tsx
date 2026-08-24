@@ -168,7 +168,10 @@ export default function FreedomBlueprint() {
   const session = useOSSession();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [result, setResult] = useState<BlueprintResult | null>(null);
+  const [result, setResult] = useState<BlueprintResult | null>(() => {
+    const raw = sessionStorage.getItem("blueprintResult");
+    return raw ? JSON.parse(raw) : null;
+  });
   const brand = activeBrand;
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
