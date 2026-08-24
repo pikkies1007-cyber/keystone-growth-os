@@ -4,6 +4,7 @@ import { ToolkitProgressCard } from "@/components/ToolkitProgressCard";
 const TOOLKIT_LABELS: Record<string, string> = {
   "business-snapshot": "Business Snapshot",
   "bottleneck-audit": "Bottleneck Audit",
+  "freedom-blueprint": "Freedom Blueprint",
   delegation: "10-80-10 Delegation",
   pricing: "Pricing Confidence",
   flywheel: "Flywheel Principle",

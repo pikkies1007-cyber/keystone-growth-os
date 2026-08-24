@@ -4,6 +4,8 @@ import { activeBrand } from "../../../shared/brandConfig";
 import { ArrowRight, ArrowLeft, Compass, AlertTriangle, CheckCircle2, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOSSession, notifyOSSessionChange } from "../hooks/useOSSession";
+import { trpc } from "@/lib/trpc";
+import { useGoalSessionId } from "@/lib/goalSession";
 
 interface BlueprintQuestion {
   id: string;
@@ -168,6 +170,8 @@ export default function FreedomBlueprint() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<BlueprintResult | null>(null);
   const brand = activeBrand;
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+  const goalSessionId = useGoalSessionId();
 
   const currentQuestion = questions[currentIndex];
   const progress = Math.round((currentIndex / questions.length) * 100);
@@ -184,6 +188,16 @@ export default function FreedomBlueprint() {
       setResult(r);
       sessionStorage.setItem("blueprintResult", JSON.stringify(r));
       notifyOSSessionChange();
+
+      if (r.insights.length > 0) {
+        saveSubmission.mutate({
+          toolkitKey: "freedom-blueprint",
+          inputData: { primaryTheme: r.primaryTheme, moneyFrictionDetected: r.moneyFrictionDetected },
+          resultSummary: { primaryTheme: r.primaryTheme },
+          suggestions: r.insights,
+          syncToGoals: { sessionId: goalSessionId, dimension: "Owner Behaviour" },
+        });
+      }
     } else {
       setCurrentIndex((i) => i + 1);
     }
