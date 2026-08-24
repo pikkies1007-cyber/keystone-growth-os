@@ -146,6 +146,10 @@ export const toolkitSuggestions = pgTable("toolkit_suggestions", {
   toolkitKey: varchar("toolkitKey", { length: 64 }).notNull(),
   suggestionText: text("suggestionText").notNull(),
   status: suggestionStatusEnum("status").default("not_started").notNull(),
+  // Links to a real row in goal_items, created automatically alongside this
+  // suggestion, so the Progress page and the 90-Day Goal Dashboard show and
+  // update the exact same underlying data instead of two separate trackers.
+  linkedGoalItemId: integer("linkedGoalItemId"),
   statusUpdatedAt: timestamp("statusUpdatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

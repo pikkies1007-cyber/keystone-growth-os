@@ -6,7 +6,7 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import {
   createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, getAllLeadsAdmin, getAllAuditResults,
   saveToolkitSubmission, getToolkitSubmissionHistory, getLatestSubmissionPerToolkit, updateSuggestionStatus,
-  getSuggestionsByToolkit, addWinLearning, getWinsLearningsByToolkit,
+  getSuggestionsByToolkit, addWinLearning, getWinsLearningsByToolkit, updateGoalItemStatusAndSyncSuggestion,
 } from "./db";
 import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment } from "./email";
 import { z } from "zod";
@@ -190,7 +190,7 @@ const goalsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      await updateGoalItemStatus(input.id, input.status);
+      await updateGoalItemStatusAndSyncSuggestion(input.id, input.status);
       return { success: true };
     }),
 });
@@ -278,6 +278,9 @@ const toolkitSubmissionsRouter = router({
         inputData: z.record(z.string(), z.any()),
         resultSummary: z.record(z.string(), z.any()),
         suggestions: z.array(z.string().min(1)).max(20).optional(),
+        // If provided, each suggestion also becomes a real, synced row in
+        // the 90-Day Goal Dashboard instead of just a separate checklist.
+        syncToGoals: z.object({ sessionId: z.string().max(64), dimension: z.string().max(64).optional() }).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -288,7 +291,8 @@ const toolkitSubmissionsRouter = router({
           inputData: input.inputData,
           resultSummary: input.resultSummary,
         },
-        input.suggestions
+        input.suggestions,
+        input.syncToGoals
       );
     }),
 

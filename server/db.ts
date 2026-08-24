@@ -132,9 +132,19 @@ export async function createLmsEnrolment(data: InsertLmsEnrolment) {
 
 // ─── Toolkit Progress Tracking ──────────────────────────────────────────────
 
+function parseWeekNumber(text: string): number | null {
+  const match = text.match(/^Week (\d+):/i);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 export async function saveToolkitSubmission(
   data: InsertToolkitSubmission,
-  suggestionTexts?: string[]
+  suggestionTexts?: string[],
+  // When provided, each suggestion also becomes a real row in goal_items
+  // (the same table the 90-Day Goal Dashboard reads from), so it shows up
+  // there automatically -- no manual "Add Goal" click needed, and ticking
+  // it off in either place is the same underlying update.
+  goalSyncOptions?: { sessionId: string; dimension?: string | null }
 ): Promise<{ submissionId: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -143,14 +153,39 @@ export async function saveToolkitSubmission(
   const submissionId = submission?.id ?? 0;
 
   if (suggestionTexts?.length) {
-    await db.insert(toolkitSuggestions).values(
-      suggestionTexts.map((suggestionText) => ({
-        submissionId,
-        userId: data.userId,
-        toolkitKey: data.toolkitKey,
-        suggestionText,
-      }))
-    );
+    if (goalSyncOptions) {
+      // Create the real goal first, then the suggestion row links to it.
+      for (const suggestionText of suggestionTexts) {
+        const [goal] = await db
+          .insert(goalItems)
+          .values({
+            sessionId: goalSyncOptions.sessionId,
+            title: suggestionText,
+            dimension: goalSyncOptions.dimension ?? null,
+            priority: "medium",
+            dueWeek: parseWeekNumber(suggestionText),
+            clientId: "keystone",
+          })
+          .returning({ id: goalItems.id });
+
+        await db.insert(toolkitSuggestions).values({
+          submissionId,
+          userId: data.userId,
+          toolkitKey: data.toolkitKey,
+          suggestionText,
+          linkedGoalItemId: goal?.id ?? null,
+        });
+      }
+    } else {
+      await db.insert(toolkitSuggestions).values(
+        suggestionTexts.map((suggestionText) => ({
+          submissionId,
+          userId: data.userId,
+          toolkitKey: data.toolkitKey,
+          suggestionText,
+        }))
+      );
+    }
   }
 
   return { submissionId };
@@ -190,20 +225,52 @@ export async function updateSuggestionStatus(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   // Scoped to userId too, not just id -- so one user can never toggle another's suggestion.
-  return db
+  const [updated] = await db
     .update(toolkitSuggestions)
     .set({ status })
-    .where(and(eq(toolkitSuggestions.id, id), eq(toolkitSuggestions.userId, userId)));
+    .where(and(eq(toolkitSuggestions.id, id), eq(toolkitSuggestions.userId, userId)))
+    .returning({ linkedGoalItemId: toolkitSuggestions.linkedGoalItemId });
+
+  // Keep the linked goal in sync too, so ticking it off here or on the Goal
+  // Dashboard reflects the exact same underlying state either way.
+  if (updated?.linkedGoalItemId) {
+    const goalStatus = status === "done" ? "completed" : status === "in_progress" ? "in_progress" : "pending";
+    await db.update(goalItems).set({ status: goalStatus }).where(eq(goalItems.id, updated.linkedGoalItemId));
+  }
+}
+
+export async function updateGoalItemStatusAndSyncSuggestion(
+  id: number,
+  status: "pending" | "in_progress" | "completed"
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(goalItems).set({ status }).where(eq(goalItems.id, id));
+
+  // Reverse direction: if this goal was created from a toolkit suggestion,
+  // keep that suggestion's own status in sync too.
+  const suggestionStatus = status === "completed" ? "done" : status === "in_progress" ? "in_progress" : "not_started";
+  await db.update(toolkitSuggestions).set({ status: suggestionStatus }).where(eq(toolkitSuggestions.linkedGoalItemId, id));
 }
 
 export async function getSuggestionsByToolkit(userId: number, toolkitKey: string) {
   const db = await getDb();
   if (!db) return [];
+  // Only the latest submission's suggestions -- otherwise every past
+  // attempt at the same toolkit piles up as duplicates.
+  const [latestSubmission] = await db
+    .select({ id: toolkitSubmissions.id })
+    .from(toolkitSubmissions)
+    .where(and(eq(toolkitSubmissions.userId, userId), eq(toolkitSubmissions.toolkitKey, toolkitKey)))
+    .orderBy(desc(toolkitSubmissions.submittedAt))
+    .limit(1);
+  if (!latestSubmission) return [];
+
   return db
     .select()
     .from(toolkitSuggestions)
-    .where(and(eq(toolkitSuggestions.userId, userId), eq(toolkitSuggestions.toolkitKey, toolkitKey)))
-    .orderBy(desc(toolkitSuggestions.createdAt));
+    .where(eq(toolkitSuggestions.submissionId, latestSubmission.id))
+    .orderBy(toolkitSuggestions.id);
 }
 
 export async function addWinLearning(data: InsertWinLearning) {

@@ -3,7 +3,6 @@ import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VoiceOrTextInput } from "@/components/VoiceOrTextInput";
 import { format } from "date-fns";
@@ -63,32 +62,53 @@ export function ToolkitProgressCard({
 
   const done = suggestions?.filter((s) => s.status === "done").length ?? 0;
   const total = suggestions?.length ?? 0;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>{label}</CardTitle>
-          <p className="text-sm text-muted-foreground">Completed {format(new Date(completedAt), "d MMM yyyy")}</p>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle>{label}</CardTitle>
+            <p className="text-sm text-muted-foreground">Completed {format(new Date(completedAt), "d MMM yyyy")}</p>
+          </div>
+          {total > 0 && (
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-bold leading-none">{pct}%</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {done} of {total} done
+              </p>
+            </div>
+          )}
         </div>
         {total > 0 && (
-          <Badge variant="secondary">
-            {done}/{total} actions done
-          </Badge>
+          <div className="h-2 w-full rounded-full bg-muted mt-3 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {suggestions && suggestions.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Suggested actions</p>
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold">What to do</p>
+              <p className="text-xs text-muted-foreground">Synced with your Goal Dashboard</p>
+            </div>
             {statusError && <p className="text-xs text-destructive">{statusError}</p>}
             {suggestions.map((s) => {
               const route = findToolkitRoute(s.suggestionText);
               return (
-                <div key={s.id} className="flex items-start gap-2 text-sm">
+                <div
+                  key={s.id}
+                  className="flex items-start gap-3 text-sm rounded-lg p-2.5 -mx-2.5 transition-colors hover:bg-muted/50"
+                >
                   <Checkbox
                     checked={s.status === "done"}
                     disabled={updateStatus.isPending}
+                    className="mt-0.5 h-5 w-5"
                     onCheckedChange={(checked) =>
                       updateStatus.mutate({ id: s.id, status: checked ? "done" : "not_started" })
                     }
@@ -96,14 +116,14 @@ export function ToolkitProgressCard({
                   {route ? (
                     <Link href={route}>
                       <a
-                        className={`flex items-center gap-1 hover:underline ${s.status === "done" ? "line-through text-muted-foreground" : "text-primary"}`}
+                        className={`flex items-center gap-1 hover:underline leading-snug ${s.status === "done" ? "line-through text-muted-foreground" : "text-primary font-medium"}`}
                       >
                         {s.suggestionText}
                         <ExternalLink className="h-3 w-3 shrink-0" />
                       </a>
                     </Link>
                   ) : (
-                    <span className={s.status === "done" ? "line-through text-muted-foreground" : ""}>
+                    <span className={`leading-snug ${s.status === "done" ? "line-through text-muted-foreground" : ""}`}>
                       {s.suggestionText}
                     </span>
                   )}

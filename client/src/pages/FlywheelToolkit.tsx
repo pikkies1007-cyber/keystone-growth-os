@@ -162,6 +162,15 @@ export default function FlywheelToolkit() {
 
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
 
+  function getKeystoneSessionId() {
+    let id = sessionStorage.getItem("keystoneSessionId");
+    if (!id) {
+      id = `anon-${Date.now()}`;
+      sessionStorage.setItem("keystoneSessionId", id);
+    }
+    return id;
+  }
+
   function handleComplete() {
     sessionStorage.setItem(
       "flywheelResult",
@@ -176,6 +185,7 @@ export default function FlywheelToolkit() {
       inputData: { industry: selectedIndustry?.id ?? null, industryLabel: selectedIndustry?.label ?? null, tracker },
       resultSummary: { industryLabel: selectedIndustry?.label ?? null },
       suggestions: selectedIndustry?.plan30,
+      syncToGoals: { sessionId: getKeystoneSessionId(), dimension: "Sales" },
     });
   }
 

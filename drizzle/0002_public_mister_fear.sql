@@ -1,0 +1,1 @@
+ALTER TABLE "toolkit_suggestions" ADD COLUMN "linkedGoalItemId" integer;
