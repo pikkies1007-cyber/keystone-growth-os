@@ -5,6 +5,7 @@ import { ArrowRight, ArrowLeft, AlertTriangle, CheckCircle2, TrendingDown, Refre
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 import { useOSSession, notifyOSSessionChange } from "../hooks/useOSSession";
+import { useGoalSessionId } from "@/lib/goalSession";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -266,6 +267,16 @@ export default function BottleneckAudit() {
   }
 
   const saveAudit = trpc.audit.save.useMutation();
+  const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+  const goalSessionId = useGoalSessionId();
+
+  // Mirrors Dashboard.tsx's bottleneckToolkitRoute -- only these two
+  // dimensions currently have a dedicated toolkit to send someone to.
+  function bottleneckCta(bottleneck: string): { label: string; route: string } | null {
+    if (bottleneck === "cash") return { label: "Open Flywheel Toolkit", route: "/os/flywheel" };
+    if (bottleneck === "owner" || bottleneck === "staff") return { label: "Open Delegation Toolkit", route: "/os/delegation" };
+    return null;
+  }
 
   function handleNext() {
     if (isLast) {
@@ -289,6 +300,20 @@ export default function BottleneckAudit() {
         scores: { ...rest, ownerBehaviour: owner },
         clientId: activeBrand.clientId,
       });
+
+      // Only show up on Progress/Goals when there's an actual actionable
+      // next step to track -- sales/systems don't have a dedicated toolkit
+      // yet, so nothing gets synced for those, per design.
+      const cta = bottleneckCta(r.primaryBottleneck);
+      if (cta) {
+        saveSubmission.mutate({
+          toolkitKey: "bottleneck-audit",
+          inputData: { scores: r.scores, primaryBottleneck: r.primaryBottleneck },
+          resultSummary: { primaryBottleneck: r.primaryBottleneck },
+          suggestions: [cta.label],
+          syncToGoals: { sessionId: goalSessionId, dimension: r.primaryBottleneck },
+        });
+      }
     } else {
       setCurrentIndex((i) => i + 1);
     }
