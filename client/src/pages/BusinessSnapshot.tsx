@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -149,6 +149,35 @@ export default function BusinessSnapshot() {
   const progress = Math.round((step / totalSteps) * 100);
 
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
+
+  // sessionStorage is tab-scoped and clears when the tab/window closes, so a
+  // completed snapshot can "disappear" even though it's safely saved in the
+  // database (handleComplete below saves both). If sessionStorage came back
+  // empty, fall back to the last real DB submission and rehydrate from that
+  // instead of showing the intro screen.
+  const history = trpc.toolkitSubmissions.history.useQuery(
+    { toolkitKey: "business-snapshot" },
+    { enabled: !result }
+  );
+
+  useEffect(() => {
+    if (result || history.isLoading) return;
+    const latest = history.data?.[0];
+    if (!latest) return;
+    const input = (latest.inputData ?? {}) as Record<string, string>;
+    const rehydrated: SnapshotResult = {
+      businessName: input.businessName ?? "Your Business",
+      revenueRange: input.revenueRange ?? "",
+      staffCount: input.staffCount ?? "",
+      primaryRevenue: input.primaryRevenue ?? "",
+      biggestTimeDrain: input.biggestTimeDrain ?? "",
+      oneChange: input.oneChange ?? "",
+      completedAt: new Date(latest.submittedAt as unknown as string).toISOString(),
+    };
+    sessionStorage.setItem("businessSnapshot", JSON.stringify(rehydrated));
+    setResult(rehydrated);
+    setStep(totalSteps);
+  }, [result, history.isLoading, history.data, totalSteps]);
 
   function handleComplete() {
     const snapshot: SnapshotResult = {
