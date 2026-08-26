@@ -131,11 +131,11 @@ const DRAIN_DIAGNOSIS: Record<
 
 export default function BusinessSnapshot() {
   const [, navigate] = useLocation();
-  const [step, setStep] = useState(0);
   const [result, setResult] = useState<SnapshotResult | null>(() => {
     const raw = sessionStorage.getItem("businessSnapshot");
     return raw ? JSON.parse(raw) : null;
   });
+  const [step, setStep] = useState(() => (result ? 6 : 0));
 
   // Form state
   const [businessName, setBusinessName] = useState("");
