@@ -250,8 +250,8 @@ const coachRouter = router({
           .max(40),
       })
     )
-    .mutation(async ({ input }) => {
-      const reply = await getCoachReply(input.history);
+    .mutation(async ({ input, ctx }) => {
+      const reply = await getCoachReply(input.history, ctx.user);
       return { reply };
     }),
 });

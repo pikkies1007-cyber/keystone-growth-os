@@ -87,6 +87,25 @@ export async function getAllLeadsAdmin() {
   return db.select().from(leads).orderBy(desc(leads.createdAt));
 }
 
+/**
+ * The Money Identity Checkpoint captures leads by email, not userId (it's a
+ * publicProcedure that can run before signup), so this is a best-effort
+ * match against the signed-in user's account email. Returns undefined if
+ * they've never completed the checkpoint, or completed it under a different
+ * email than the one they're signed in with.
+ */
+export async function getLatestLeadByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(leads)
+    .where(eq(leads.email, email))
+    .orderBy(desc(leads.createdAt))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getAllAuditResults() {
   const db = await getDb();
   if (!db) return [];
