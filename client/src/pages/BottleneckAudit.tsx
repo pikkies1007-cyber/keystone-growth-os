@@ -197,6 +197,16 @@ const dimensionColors: Record<Dimension, string> = {
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 
+function recommendationsFromScores(scores: Record<Dimension, number>): string[] {
+  const recommendations: string[] = [];
+  if (scores.sales < 50) recommendations.push("Build a repeatable sales process and review your pricing confidence.");
+  if (scores.cash < 50) recommendations.push("Implement weekly cash flow tracking and separate personal from business finances.");
+  if (scores.staff < 50) recommendations.push("Document roles and create a team accountability framework.");
+  if (scores.systems < 50) recommendations.push("Identify your top 3 manual processes and create SOPs for each.");
+  if (scores.owner < 50) recommendations.push("Shift from working IN the business to working ON it — start with one delegated task.");
+  return recommendations;
+}
+
 function calculateResults(answers: Record<string, number>): AuditResult {
   const dimensionScores: Record<Dimension, { total: number; count: number }> = {
     sales: { total: 0, count: 0 },
@@ -232,14 +242,7 @@ function calculateResults(answers: Record<string, number>): AuditResult {
 
   const moneyFrictionDetected = moneySignalCount >= 3;
 
-  const recommendations: string[] = [];
-  if (scores.sales < 50) recommendations.push("Build a repeatable sales process and review your pricing confidence.");
-  if (scores.cash < 50) recommendations.push("Implement weekly cash flow tracking and separate personal from business finances.");
-  if (scores.staff < 50) recommendations.push("Document roles and create a team accountability framework.");
-  if (scores.systems < 50) recommendations.push("Identify your top 3 manual processes and create SOPs for each.");
-  if (scores.owner < 50) recommendations.push("Shift from working IN the business to working ON it — start with one delegated task.");
-
-  return { scores, moneyFrictionDetected, primaryBottleneck, recommendations };
+  return { scores, moneyFrictionDetected, primaryBottleneck, recommendations: recommendationsFromScores(scores) };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -274,9 +277,13 @@ export default function BottleneckAudit() {
   // sessionStorage-backed -- same root cause as the earlier Business Snapshot
   // bug: sessionStorage clears when the tab/window closes, so a completed
   // audit can "disappear" even though it was saved to the database. Fall
-  // back to the last real submission and recompute the full result from the
-  // raw per-question answers stored there (calculateResults is deterministic,
-  // so this reproduces scores/primaryBottleneck/recommendations exactly).
+  // back to the last real submission and rebuild the result from it.
+  // Submissions saved before today's fix only have {scores, primaryBottleneck}
+  // (no raw answers), so both shapes are handled: newer rows recompute via
+  // calculateResults (exact reproduction, including moneyFrictionDetected);
+  // older rows rebuild recommendations from the saved scores directly
+  // (moneyFrictionDetected can't be recovered for those, since it depends on
+  // which specific options were picked, not just the aggregate score).
   const auditHistory = trpc.toolkitSubmissions.history.useQuery(
     { toolkitKey: "bottleneck-audit" },
     { enabled: !result }
@@ -285,12 +292,25 @@ export default function BottleneckAudit() {
   useEffect(() => {
     if (result || auditHistory.isLoading) return;
     const latest = auditHistory.data?.[0];
-    const savedAnswers = (latest?.inputData as { answers?: Record<string, number> } | undefined)?.answers;
-    if (!latest || !savedAnswers) return;
-    const rehydrated: AuditResult = {
-      ...calculateResults(savedAnswers),
-      completedAt: new Date(latest.submittedAt as unknown as string).getTime(),
-    };
+    if (!latest) return;
+    const input = latest.inputData as
+      | { answers?: Record<string, number>; scores?: Record<Dimension, number>; primaryBottleneck?: Dimension }
+      | undefined;
+
+    let rehydrated: AuditResult | null = null;
+    if (input?.answers) {
+      rehydrated = calculateResults(input.answers);
+    } else if (input?.scores && input?.primaryBottleneck) {
+      rehydrated = {
+        scores: input.scores,
+        primaryBottleneck: input.primaryBottleneck,
+        moneyFrictionDetected: false,
+        recommendations: recommendationsFromScores(input.scores),
+      };
+    }
+    if (!rehydrated) return;
+
+    rehydrated.completedAt = new Date(latest.submittedAt as unknown as string).getTime();
     sessionStorage.setItem("auditResult", JSON.stringify(rehydrated));
     notifyOSSessionChange();
     setResult(rehydrated);
