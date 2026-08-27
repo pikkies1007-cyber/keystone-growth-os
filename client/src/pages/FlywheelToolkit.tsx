@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useGoalSessionId } from "@/lib/goalSession";
@@ -172,6 +172,28 @@ export default function FlywheelToolkit() {
 
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
+
+  // Same sessionStorage-clears-on-tab-close issue already fixed elsewhere.
+  // Falls back to the saved submission's industry id to reconstruct
+  // selectedIndustry the same way the sessionStorage path already does.
+  // Note: the reviews/referrals/reactivations tracker below has always been
+  // a purely in-memory counter (never persisted, even before today), so it
+  // intentionally resets on any reload -- out of scope for this fix.
+  const flywheelHistory = trpc.toolkitSubmissions.history.useQuery(
+    { toolkitKey: "flywheel" },
+    { enabled: !done }
+  );
+
+  useEffect(() => {
+    if (done || flywheelHistory.isLoading) return;
+    const latest = flywheelHistory.data?.[0];
+    const input = latest?.inputData as { industry?: string } | undefined;
+    const industry = input?.industry ? INDUSTRIES.find((i) => i.id === input.industry) ?? null : null;
+    if (!latest || !industry) return;
+    setSelectedIndustry(industry);
+    sessionStorage.setItem("flywheelResult", JSON.stringify({ industry: industry.id, completedAt: Date.now() }));
+    setDone(true);
+  }, [done, flywheelHistory.isLoading, flywheelHistory.data]);
 
   function handleComplete() {
     sessionStorage.setItem(

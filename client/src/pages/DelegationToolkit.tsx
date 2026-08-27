@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, ArrowLeft, Users, CheckCircle2, ClipboardList, Target, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -150,6 +150,26 @@ export default function DelegationToolkit() {
   const [done, setDone] = useState(() => sessionStorage.getItem("delegationCompleted") === "true");
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
+
+  // Same sessionStorage-clears-on-tab-close issue already fixed elsewhere.
+  // "done" here was only ever a boolean flag, so even within the same tab a
+  // reload after completing lost firstProject/brief -- displaying "your
+  // chosen task" instead of the real answer. Falls back to the saved
+  // submission for both the completion flag and the actual project name.
+  const delegationHistory = trpc.toolkitSubmissions.history.useQuery(
+    { toolkitKey: "delegation" },
+    { enabled: !done }
+  );
+
+  useEffect(() => {
+    if (done || delegationHistory.isLoading) return;
+    const latest = delegationHistory.data?.[0];
+    const input = latest?.inputData as { firstProject?: string } | undefined;
+    if (!latest || !input?.firstProject) return;
+    setFirstProject(input.firstProject);
+    sessionStorage.setItem("delegationCompleted", "true");
+    setDone(true);
+  }, [done, delegationHistory.isLoading, delegationHistory.data]);
 
   function handleAssessAnswer(qId: string, value: number) {
     setAssessAnswers((prev) => ({ ...prev, [qId]: value }));

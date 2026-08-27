@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { activeBrand } from "../../../shared/brandConfig";
 import { ArrowRight, ArrowLeft, Compass, AlertTriangle, CheckCircle2, Brain } from "lucide-react";
@@ -176,6 +176,43 @@ export default function FreedomBlueprint() {
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
 
+  // Same sessionStorage-clears-on-tab-close issue already fixed on Snapshot
+  // and Audit. Fall back to the last real submission when local state is
+  // empty. Rows saved with the raw answers recompute the full result exactly
+  // via calculateBlueprintResult; older rows (saved before this fix, or
+  // where insights.length was 0 so nothing used to get saved at all) fall
+  // back to whatever summary fields they do have, with an empty insights
+  // list (the results screen already handles that gracefully).
+  const blueprintHistory = trpc.toolkitSubmissions.history.useQuery(
+    { toolkitKey: "freedom-blueprint" },
+    { enabled: !result }
+  );
+
+  useEffect(() => {
+    if (result || blueprintHistory.isLoading) return;
+    const latest = blueprintHistory.data?.[0];
+    if (!latest) return;
+    const input = latest.inputData as
+      | { answers?: Record<string, number>; primaryTheme?: string; moneyFrictionDetected?: boolean }
+      | undefined;
+
+    let rehydrated: BlueprintResult | null = null;
+    if (input?.answers) {
+      rehydrated = calculateBlueprintResult(input.answers);
+    } else if (input?.primaryTheme) {
+      rehydrated = {
+        primaryTheme: input.primaryTheme,
+        moneyFrictionDetected: input.moneyFrictionDetected ?? false,
+        insights: [],
+      };
+    }
+    if (!rehydrated) return;
+
+    setResult(rehydrated);
+    sessionStorage.setItem("blueprintResult", JSON.stringify(rehydrated));
+    notifyOSSessionChange();
+  }, [result, blueprintHistory.isLoading, blueprintHistory.data]);
+
   const currentQuestion = questions[currentIndex];
   const progress = Math.round((currentIndex / questions.length) * 100);
   const isAnswered = answers[currentQuestion?.id] !== undefined;
@@ -195,10 +232,19 @@ export default function FreedomBlueprint() {
       if (r.insights.length > 0) {
         saveSubmission.mutate({
           toolkitKey: "freedom-blueprint",
-          inputData: { primaryTheme: r.primaryTheme, moneyFrictionDetected: r.moneyFrictionDetected },
+          inputData: { answers, primaryTheme: r.primaryTheme, moneyFrictionDetected: r.moneyFrictionDetected },
           resultSummary: { primaryTheme: r.primaryTheme },
           suggestions: r.insights,
           syncToGoals: { sessionId: goalSessionId, dimension: "Owner Behaviour" },
+        });
+      } else {
+        // Still save the submission itself even with no insights to sync --
+        // needed to rehydrate this page after sessionStorage clears, same as
+        // every other toolkit. Previously nothing was saved here at all.
+        saveSubmission.mutate({
+          toolkitKey: "freedom-blueprint",
+          inputData: { answers, primaryTheme: r.primaryTheme, moneyFrictionDetected: r.moneyFrictionDetected },
+          resultSummary: { primaryTheme: r.primaryTheme },
         });
       }
     } else {
