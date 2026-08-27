@@ -46,12 +46,6 @@ const navItems: NavItem[] = [
     description: "Overview & progress",
   },
   {
-    label: "Business Coach",
-    path: "/os/coach",
-    icon: Sparkles,
-    description: "Ask anything, anytime",
-  },
-  {
     label: "Progress",
     path: "/os/progress",
     icon: BarChart3,
