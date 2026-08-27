@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { activeBrand } from "../../../shared/brandConfig";
 import { ArrowRight, ArrowLeft, AlertTriangle, CheckCircle2, TrendingDown, RefreshCw, Clock, Users } from "lucide-react";
@@ -270,6 +270,32 @@ export default function BottleneckAudit() {
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
 
+  // The audit result normally comes from useOSSession, which is entirely
+  // sessionStorage-backed -- same root cause as the earlier Business Snapshot
+  // bug: sessionStorage clears when the tab/window closes, so a completed
+  // audit can "disappear" even though it was saved to the database. Fall
+  // back to the last real submission and recompute the full result from the
+  // raw per-question answers stored there (calculateResults is deterministic,
+  // so this reproduces scores/primaryBottleneck/recommendations exactly).
+  const auditHistory = trpc.toolkitSubmissions.history.useQuery(
+    { toolkitKey: "bottleneck-audit" },
+    { enabled: !result }
+  );
+
+  useEffect(() => {
+    if (result || auditHistory.isLoading) return;
+    const latest = auditHistory.data?.[0];
+    const savedAnswers = (latest?.inputData as { answers?: Record<string, number> } | undefined)?.answers;
+    if (!latest || !savedAnswers) return;
+    const rehydrated: AuditResult = {
+      ...calculateResults(savedAnswers),
+      completedAt: new Date(latest.submittedAt as unknown as string).getTime(),
+    };
+    sessionStorage.setItem("auditResult", JSON.stringify(rehydrated));
+    notifyOSSessionChange();
+    setResult(rehydrated);
+  }, [result, auditHistory.isLoading, auditHistory.data]);
+
   // Mirrors Dashboard.tsx's bottleneckToolkitRoute, plus Sales -> Flywheel
   // (consistent with how Business Snapshot already treats a sales/customer-
   // acquisition problem as a Flywheel fit). Only "systems" has no dedicated
@@ -303,19 +329,24 @@ export default function BottleneckAudit() {
         clientId: activeBrand.clientId,
       });
 
-      // Only show up on Progress/Goals when there's an actual actionable
-      // next step to track -- sales/systems don't have a dedicated toolkit
-      // yet, so nothing gets synced for those, per design.
+      // Always save the submission itself -- needed to rehydrate this page
+      // after sessionStorage clears (tab close, new tab, new device), and
+      // previously the "systems" bottleneck had no durable record at all.
+      // Suggestions/goal-sync stay conditional: only show up on
+      // Progress/Goals when there's an actual actionable next step to
+      // track -- sales/systems don't have a dedicated toolkit yet.
       const cta = bottleneckCta(r.primaryBottleneck);
-      if (cta) {
-        saveSubmission.mutate({
-          toolkitKey: "bottleneck-audit",
-          inputData: { scores: r.scores, primaryBottleneck: r.primaryBottleneck },
-          resultSummary: { primaryBottleneck: r.primaryBottleneck },
-          suggestions: [cta.label],
-          syncToGoals: { sessionId: goalSessionId, dimension: r.primaryBottleneck },
-        });
-      }
+      saveSubmission.mutate({
+        toolkitKey: "bottleneck-audit",
+        inputData: { answers, scores: r.scores, primaryBottleneck: r.primaryBottleneck },
+        resultSummary: { primaryBottleneck: r.primaryBottleneck },
+        ...(cta
+          ? {
+              suggestions: [cta.label],
+              syncToGoals: { sessionId: goalSessionId, dimension: r.primaryBottleneck },
+            }
+          : {}),
+      });
     } else {
       setCurrentIndex((i) => i + 1);
     }
