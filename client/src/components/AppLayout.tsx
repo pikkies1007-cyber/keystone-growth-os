@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { SignInForm } from "@/components/SignInForm";
 import { useOSSession } from "../hooks/useOSSession";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { CoachChatPanel, INITIAL_COACH_MESSAGE, type ChatMessage } from "@/components/CoachChatPanel";
 
 interface NavItem {
   label: string;
@@ -137,6 +138,8 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachMessages, setCoachMessages] = useState<ChatMessage[]>([INITIAL_COACH_MESSAGE]);
   const brand = activeBrand;
   const session = useOSSession();
   const { user, loading: authLoading, error: authError } = useAuth();
@@ -505,23 +508,66 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
 
-      {/* ── Floating Coach CTA ──────────────────────────────────────────── */}
+      {/* ── Floating Coach Widget ────────────────────────────────────────── */}
       {user && location !== "/os/coach" && (
-        <Link href="/os/coach">
-          <a
+        <>
+          {coachOpen && (
+            <div
+              className="fixed bottom-24 right-6 z-40 w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100vh-8rem)] rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in"
+              style={{ backgroundColor: "var(--color-bg-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <div
+                className="flex items-center justify-between gap-2 px-4 py-3 shrink-0"
+                style={{ borderBottom: "1px solid var(--color-border)" }}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "var(--color-primary)" }}
+                  >
+                    <Sparkles size={16} color="#0F1923" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--color-text-base)" }}>
+                      Business Coach
+                    </p>
+                    <p className="text-xs truncate" style={{ color: "var(--color-text-subtle)" }}>
+                      Ask anything, anytime
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCoachOpen(false)}
+                  aria-label="Close Business Coach"
+                  className="p-1.5 rounded-lg hover:bg-white/5 shrink-0"
+                >
+                  <X className="w-4 h-4" style={{ color: "var(--color-text-muted)" }} />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0">
+                <CoachChatPanel messages={coachMessages} setMessages={setCoachMessages} compact />
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setCoachOpen((open) => !open)}
             className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 pl-4 pr-5 py-3.5 rounded-full shadow-lg hover:shadow-2xl transition-all duration-200 hover:-translate-y-0.5 group"
             style={{
               background: "linear-gradient(135deg, var(--color-primary), var(--color-primary-dark, var(--color-primary)))",
               boxShadow: "0 8px 24px -6px rgba(45, 139, 122, 0.5)",
             }}
-            aria-label="Open Business Coach"
+            aria-label={coachOpen ? "Close Business Coach" : "Open Business Coach"}
           >
-            <Sparkles className="w-5 h-5 text-white shrink-0 transition-transform group-hover:rotate-12" />
+            {coachOpen ? (
+              <X className="w-5 h-5 text-white shrink-0" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-white shrink-0 transition-transform group-hover:rotate-12" />
+            )}
             <span className="text-sm font-semibold text-white whitespace-nowrap">
-              Ask Coach
+              {coachOpen ? "Close" : "Ask Coach"}
             </span>
-          </a>
-        </Link>
+          </button>
+        </>
       )}
     </div>
   );
