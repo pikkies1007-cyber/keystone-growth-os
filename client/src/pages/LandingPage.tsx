@@ -1,6 +1,6 @@
 import { activeBrand } from "@shared/brandConfig";
 import { Link } from "wouter";
-import { ArrowRight, Target } from "lucide-react";
+import { Target, MessageCircle } from "lucide-react";
 
 const tiers = [
   {
@@ -91,10 +91,13 @@ export default function LandingPage() {
             </a>
           </Link>
           <a
-            href={`mailto:${"pikkies1007@gmail.com"}?subject=${encodeURIComponent("Keystone Business Group — Waitlist")}`}
+            href={`https://wa.me/27829026145?text=${encodeURIComponent("Hi Riana, I need a business coach.")}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-1 font-medium underline underline-offset-4"
           >
-            Join the Waitlist <ArrowRight size={16} />
+            <MessageCircle size={16} />
+            I need a business coach
           </a>
         </div>
 
