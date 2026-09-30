@@ -141,6 +141,21 @@ export async function updateGoalItemStatus(id: number, status: "pending" | "in_p
   return db.update(goalItems).set({ status }).where(eq(goalItems.id, id));
 }
 
+export type GoalMetric = { label: string; unit?: string; start: number; current: number; target: number };
+
+/** Generalized goal edit -- Focus flag (priority) and/or a measurable metric. Only touches fields actually passed. */
+export async function updateGoalItem(
+  id: number,
+  updates: { priority?: "high" | "medium" | "low"; metric?: GoalMetric | null }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (updates.priority !== undefined) set.priority = updates.priority;
+  if (updates.metric !== undefined) set.metric = updates.metric;
+  return db.update(goalItems).set(set).where(eq(goalItems.id, id));
+}
+
 // ─── LMS Enrolments ─────────────────────────────────────────────────────────────────────────────
 
 export async function createLmsEnrolment(data: InsertLmsEnrolment) {

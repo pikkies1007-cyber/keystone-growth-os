@@ -103,6 +103,8 @@ export default function WeeklyRhythm() {
   });
   const saveSubmission = trpc.toolkitSubmissions.save.useMutation();
   const goalSessionId = useGoalSessionId();
+  const { data: dbGoals } = trpc.goals.list.useQuery({ sessionId: goalSessionId });
+  const focusGoals = (dbGoals ?? []).filter((g) => g.priority === "high" && g.status !== "completed");
   const [tracked, setTracked] = useState(false);
 
   // Persist on every change
@@ -187,6 +189,20 @@ export default function WeeklyRhythm() {
   function updatePriority(i: number, val: string) {
     const next = [...plan.mondayPriorities];
     next[i] = val;
+    setPlan({ ...plan, mondayPriorities: next });
+  }
+
+  // Fills only empty slots -- never overwrites something the person already
+  // typed. This is the real version of the "pull from your 90-day goals"
+  // hint below, which used to be just placeholder text with nothing behind it.
+  function fillPrioritiesFromFocus() {
+    const next = [...plan.mondayPriorities];
+    let goalIdx = 0;
+    for (let i = 0; i < next.length && goalIdx < focusGoals.length; i++) {
+      if (next[i].trim()) continue;
+      next[i] = focusGoals[goalIdx].title;
+      goalIdx++;
+    }
     setPlan({ ...plan, mondayPriorities: next });
   }
 
@@ -295,8 +311,16 @@ export default function WeeklyRhythm() {
                 </div>
                 <p className="text-xs text-slate-500">
                   What are the three things that, if completed this week, would make the week a success?
-                  Pull from your 90-day goals.
                 </p>
+                {focusGoals.length > 0 && (
+                  <button
+                    onClick={fillPrioritiesFromFocus}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-teal-400 hover:text-teal-300 transition-colors"
+                  >
+                    <Star className="w-3 h-3" fill="currentColor" />
+                    Fill empty slots from my Focus goals
+                  </button>
+                )}
                 <div className="space-y-2">
                   {plan.mondayPriorities.map((p, i) => (
                     <div key={i} className="flex items-center gap-3">

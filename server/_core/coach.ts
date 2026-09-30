@@ -120,7 +120,7 @@ function summarizeSubmission(toolkitKey: string, inputData: unknown, submittedAt
  * lookup is independently wrapped: a failure in one section (e.g. the leads
  * table has no match) should never take down the whole context, or the chat.
  */
-async function buildCoachContext(user: User): Promise<string> {
+export async function buildCoachContext(user: User): Promise<string> {
   const sections: string[] = [];
 
   if (user.email) {
@@ -189,5 +189,62 @@ export async function getCoachReply(history: ChatMessage[], user: User): Promise
   } catch (error) {
     console.error("[Coach] OpenAI API error:", error);
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The business coach couldn't respond just now. Try again in a moment." });
+  }
+}
+
+export type FocusSuggestion = { id: number; why: string };
+
+/**
+ * The FAST method's "Focus" step: given the person's current open goals and
+ * everything known about their business, ask for the smallest subset (~20%)
+ * that would drive the majority of the result -- a Pareto call, not generic
+ * prioritization. Returns structured {id, why} pairs rather than free chat,
+ * so the UI can render them as concrete, actionable suggestions rather than
+ * parsing prose.
+ */
+export async function suggestFocusGoals(
+  user: User,
+  goals: { id: number; title: string; dimension: string | null }[]
+): Promise<FocusSuggestion[]> {
+  if (!ENV.openaiApiKey) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "The business coach isn't configured yet — an OPENAI_API_KEY is missing.",
+    });
+  }
+  if (goals.length === 0) return [];
+
+  const openai = new OpenAI({ apiKey: ENV.openaiApiKey });
+  const context = await buildCoachContext(user);
+
+  const goalList = goals.map((g) => `- id ${g.id}: "${g.title}"${g.dimension ? ` [${g.dimension}]` : ""}`).join("\n");
+
+  const prompt = `Here is this specific business's context:${context}
+
+Here are their current open 90-day goals:
+${goalList}
+
+Apply the Pareto principle: which of these goals are the vital ~20% that would drive roughly 80% of this business's results over the next 90 days, given everything you know about them above (their bottleneck, their business specifics, their money archetype)? Pick a genuinely small subset — normally 1 to 3 goals out of a longer list, never a majority of them. For each one you pick, give a one-sentence reason tied to their actual situation, not a generic explanation.
+
+Respond with ONLY a JSON array, no other text, no markdown code fences: [{"id": <goal id as a number>, "why": "<one sentence>"}]`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 500,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = (response.choices[0]?.message?.content ?? "").trim().replace(/^```(json)?|```$/g, "").trim();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const validIds = new Set(goals.map((g) => g.id));
+    return parsed
+      .filter((item): item is FocusSuggestion => typeof item?.id === "number" && typeof item?.why === "string" && validIds.has(item.id))
+      .slice(0, 5);
+  } catch (error) {
+    console.error("[Coach] Focus-suggestion error:", error);
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Couldn't generate Focus suggestions just now. Try again in a moment." });
   }
 }

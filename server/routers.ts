@@ -1,10 +1,10 @@
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, adminProcedure, protectedProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
-import { getCoachReply } from "./_core/coach";
+import { getCoachReply, suggestFocusGoals } from "./_core/coach";
 import { transcribeAudio } from "./_core/voiceTranscription";
 import {
-  createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, getAllLeadsAdmin, getAllAuditResults,
+  createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, updateGoalItem, getAllLeadsAdmin, getAllAuditResults,
   saveToolkitSubmission, getToolkitSubmissionHistory, getLatestSubmissionPerToolkit, updateSuggestionStatus,
   getSuggestionsByToolkit, addWinLearning, getWinsLearningsByToolkit, updateGoalItemStatusAndSyncSuggestion,
 } from "./db";
@@ -192,6 +192,43 @@ const goalsRouter = router({
     .mutation(async ({ input }) => {
       await updateGoalItemStatusAndSyncSuggestion(input.id, input.status);
       return { success: true };
+    }),
+
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        priority: z.enum(["high", "medium", "low"]).optional(),
+        metric: z
+          .object({
+            label: z.string().max(100),
+            unit: z.string().max(30).optional(),
+            start: z.number(),
+            current: z.number(),
+            target: z.number(),
+          })
+          .nullable()
+          .optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await updateGoalItem(input.id, { priority: input.priority, metric: input.metric });
+      return { success: true };
+    }),
+
+  // FAST method's "Focus" step: AI picks the vital ~20% of the person's
+  // current open goals, grounded in their real audit/blueprint/snapshot
+  // data (via the same context the Business Coach uses). Requires sign-in
+  // since it needs that context -- unlike the rest of this router, which
+  // stays public for the pre-signup goalSessionId fallback.
+  suggestFocus: protectedProcedure
+    .input(z.object({ sessionId: z.string().max(64) }))
+    .mutation(async ({ input, ctx }) => {
+      const goals = await getGoalItems(input.sessionId);
+      const openGoals = goals
+        .filter((g) => g.status !== "completed")
+        .map((g) => ({ id: g.id, title: g.title, dimension: g.dimension }));
+      return suggestFocusGoals(ctx.user, openGoals);
     }),
 });
 

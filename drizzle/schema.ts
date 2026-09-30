@@ -82,6 +82,8 @@ export const goalItems = pgTable("goal_items", {
   status: statusEnum("status").default("pending"),
   dueWeek: integer("dueWeek"),
   clientId: varchar("clientId", { length: 64 }).default("keystone"),
+  /** Optional measurable target, e.g. { label: "Reviews", unit: "reviews", start: 10, current: 14, target: 30 }. Null = plain checkbox goal. */
+  metric: jsonb("metric"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

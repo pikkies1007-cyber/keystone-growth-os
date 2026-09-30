@@ -1,0 +1,1 @@
+ALTER TABLE "goal_items" ADD COLUMN "metric" jsonb;
