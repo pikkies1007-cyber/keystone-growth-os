@@ -7,6 +7,7 @@ import {
   createLead, saveAuditResult, getGoalItems, createGoalItem, updateGoalItemStatus, updateGoalItem, getAllLeadsAdmin, getAllAuditResults,
   saveToolkitSubmission, getToolkitSubmissionHistory, getLatestSubmissionPerToolkit, updateSuggestionStatus,
   getSuggestionsByToolkit, addWinLearning, getWinsLearningsByToolkit, updateGoalItemStatusAndSyncSuggestion,
+  upsertGrowthSpurtAudit, getAllGrowthSpurtAudits,
 } from "./db";
 import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment } from "./email";
 import { z } from "zod";
@@ -232,6 +233,94 @@ const goalsRouter = router({
     }),
 });
 
+// ─── Growth Spurt Audit Router ───────────────────────────────────────────────
+// Public lead-qualification funnel for the "Keystone Business Group Growth
+// Spurt" offer, served at /os/growth-spurt-audit with no login required.
+// A single upsert mutation handles all three funnel stages (started ->
+// completed -> contact), replacing the standalone page's direct Formspree,
+// Slack webhook, and separate-Supabase-project calls with one in-app save
+// plus a server-side owner email notification.
+
+const growthSpurtRouter = router({
+  submit: publicProcedure
+    .input(
+      z.object({
+        sessionId: z.string().min(1).max(64),
+        stage: z.enum(["started", "completed", "contact"]),
+        name: z.string().max(255).optional(),
+        phone: z.string().max(30).optional(),
+        email: z.string().max(320).optional(),
+        businessName: z.string().max(255).optional(),
+        // Honeypot field — real visitors never fill this in.
+        website: z.string().max(255).optional(),
+        category: z.string().max(64).optional(),
+        severity: z.string().max(32).optional(),
+        severityScore: z.number().int().min(1).max(10).optional(),
+        symptoms: z.array(z.string()).optional(),
+        answers: z.record(z.string(), z.string()).optional(),
+        preferredContact: z.string().max(32).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // Bot caught the honeypot field — silently accept but don't save or notify.
+      if (input.website && input.website.trim().length > 0) {
+        return { success: true };
+      }
+
+      const saved = await upsertGrowthSpurtAudit({
+        sessionId: input.sessionId,
+        stage: input.stage,
+        name: input.name ?? null,
+        phone: input.phone ?? null,
+        email: input.email ?? null,
+        businessName: input.businessName ?? null,
+        website: input.website ?? null,
+        category: input.category ?? null,
+        severity: input.severity ?? null,
+        severityScore: input.severityScore ?? null,
+        symptoms: input.symptoms ?? null,
+        answers: input.answers ?? null,
+        preferredContact: input.preferredContact ?? null,
+        notified: 0,
+      });
+
+      // Only notify the owner on the stages that matter — not on every
+      // "started" (that would fire for everyone who opens the page), but
+      // always when an audit completes or a contact request comes in.
+      if (input.stage === "completed" || input.stage === "contact") {
+        void (async () => {
+          try {
+            const heading =
+              input.stage === "contact"
+                ? `Growth Spurt — Contact Request: ${input.name ?? "Unknown"}`
+                : `Growth Spurt — Audit Completed (${input.severity ?? "?"}): ${input.name ?? "Unknown"}`;
+            const lines = [
+              `Stage: ${input.stage}`,
+              `Name: ${input.name ?? "—"}`,
+              `Business: ${input.businessName ?? "—"}`,
+              `Phone: ${input.phone ?? "—"}`,
+              `Email: ${input.email ?? "—"}`,
+            ];
+            if (input.category) lines.push(`Bottleneck category: ${input.category}`);
+            if (input.severity) lines.push(`Severity: ${input.severity} (${input.severityScore ?? "?"}/10)`);
+            if (input.preferredContact) lines.push(`Preferred contact method: ${input.preferredContact}`);
+            if (input.symptoms && input.symptoms.length > 0) {
+              lines.push("", "Symptoms:", ...input.symptoms.map((s) => `- ${s}`));
+            }
+            await notifyOwner({ title: heading, content: lines.join("\n") });
+            if (saved) {
+              await upsertGrowthSpurtAudit({ ...saved, notified: 1 });
+            }
+          } catch (err) {
+            console.error("[GrowthSpurt] Owner notification failed:", err);
+          }
+        })();
+      }
+
+      return { success: true };
+    }),
+});
+
 // ─── Admin Router ────────────────────────────────────────────────────────────
 
 const adminRouter = router({
@@ -269,6 +358,11 @@ const adminRouter = router({
       leads: enrichedLeads,
       audits: allAudits,
     };
+  }),
+
+  /** Returns all Growth Spurt audit funnel submissions. Protected: admin role only. */
+  getGrowthSpurtAudits: adminProcedure.query(async () => {
+    return getAllGrowthSpurtAudits();
   }),
 });
 
@@ -409,6 +503,7 @@ export const appRouter = router({
   leads: leadsRouter,
   audit: auditRouter,
   goals: goalsRouter,
+  growthSpurt: growthSpurtRouter,
 });
 
 export type AppRouter = typeof appRouter;

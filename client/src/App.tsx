@@ -21,6 +21,7 @@ import FinancialRoadmap from "./pages/FinancialRoadmap";
 import AdminLeads from "./pages/AdminLeads";
 import BusinessCoach from "./pages/BusinessCoach";
 import ProgressDashboard from "./pages/ProgressDashboard";
+import GrowthSpurtAudit from "./pages/GrowthSpurtAudit";
 
 function App() {
   return (
@@ -31,6 +32,11 @@ function App() {
           <Switch>
             {/* Marketing landing page — no app chrome, this is what keystonebusinessgroup.co.za shows */}
             <Route path="/" component={LandingPage} />
+
+            {/* Growth Spurt Bottleneck Audit — public lead-qualification funnel, its
+                own distinct brand (navy/gold/teal), rendered standalone outside the
+                Growth OS sidebar/chrome, same as the landing page above. */}
+            <Route path="/os/growth-spurt-audit" component={GrowthSpurtAudit} />
 
             {/* Everything else is the actual Growth OS app, under /os */}
             <Route>

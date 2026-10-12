@@ -4,7 +4,7 @@ import postgres from "postgres";
 import {
   InsertUser, users, leads, InsertLead, auditResults, InsertAuditResult, goalItems, InsertGoalItem,
   lmsEnrolments, InsertLmsEnrolment, toolkitSubmissions, InsertToolkitSubmission, toolkitSuggestions,
-  winsLearnings, InsertWinLearning,
+  winsLearnings, InsertWinLearning, growthSpurtAudits, InsertGrowthSpurtAudit,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -334,4 +334,37 @@ export async function getWinsLearningsByToolkit(userId: number, toolkitKey: stri
     .from(winsLearnings)
     .where(and(eq(winsLearnings.userId, userId), eq(winsLearnings.toolkitKey, toolkitKey)))
     .orderBy(desc(winsLearnings.createdAt));
+}
+
+// ─── Growth Spurt Audit ──────────────────────────────────────────────────────
+// One row per visitor session (sessionId), upserted as they move through the
+// public /os/growth-spurt-audit funnel: started -> completed -> contact.
+
+export async function upsertGrowthSpurtAudit(data: InsertGrowthSpurtAudit) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db
+    .select({ id: growthSpurtAudits.id })
+    .from(growthSpurtAudits)
+    .where(eq(growthSpurtAudits.sessionId, data.sessionId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const result = await db
+      .update(growthSpurtAudits)
+      .set(data)
+      .where(eq(growthSpurtAudits.sessionId, data.sessionId))
+      .returning();
+    return result[0];
+  }
+
+  const result = await db.insert(growthSpurtAudits).values(data).returning();
+  return result[0];
+}
+
+export async function getAllGrowthSpurtAudits() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(growthSpurtAudits).orderBy(desc(growthSpurtAudits.createdAt));
 }

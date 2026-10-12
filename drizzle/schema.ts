@@ -172,3 +172,40 @@ export const winsLearnings = pgTable("wins_learnings", {
 
 export type WinLearning = typeof winsLearnings.$inferSelect;
 export type InsertWinLearning = typeof winsLearnings.$inferInsert;
+
+// ─── Growth Spurt Audit ──────────────────────────────────────────────────────
+// Lead-qualification funnel for the Keystone Business Group "Growth Spurt"
+// offer, served publicly at /os/growth-spurt-audit (no login required).
+// One row per visitor session, upserted by sessionId as they progress through
+// started -> completed -> contact. Fully separate from `leads` (Money Identity
+// Checkpoint) because the shape of the data (phone, business name, severity,
+// 14 distinct answers) doesn't fit that table.
+
+export const growthSpurtStageEnum = pgEnum("growth_spurt_stage", ["started", "completed", "contact"]);
+
+export const growthSpurtAudits = pgTable("growth_spurt_audits", {
+  id: serial("id").primaryKey(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull().unique(),
+  stage: growthSpurtStageEnum("stage").default("started").notNull(),
+  name: varchar("name", { length: 255 }),
+  phone: varchar("phone", { length: 30 }),
+  email: varchar("email", { length: 320 }),
+  businessName: varchar("businessName", { length: 255 }),
+  /** Honeypot field value — non-empty means a bot filled it in. */
+  website: varchar("website", { length: 255 }),
+  category: varchar("category", { length: 64 }),
+  severity: varchar("severity", { length: 32 }),
+  severityScore: integer("severityScore"),
+  /** JSON array of the 3-5 observable symptom strings shown on the report */
+  symptoms: jsonb("symptoms"),
+  /** JSON object of all 14 question answers, keyed q1_years_in_business etc */
+  answers: jsonb("answers"),
+  preferredContact: varchar("preferredContact", { length: 32 }),
+  /** Whether the owner email notification was sent for this row's current stage */
+  notified: integer("notified").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type GrowthSpurtAudit = typeof growthSpurtAudits.$inferSelect;
+export type InsertGrowthSpurtAudit = typeof growthSpurtAudits.$inferInsert;
