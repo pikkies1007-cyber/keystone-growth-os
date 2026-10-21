@@ -29,6 +29,10 @@ import { useOSSession, archetypeDisplay } from "../hooks/useOSSession";
 import { useCoachSession } from "../hooks/useCoachSession";
 import { getCoachMessage, type Bottleneck, type Archetype } from "../../../shared/coachMessages";
 import { trpc } from "../lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { BusinessInsightsWidget } from "@/components/BusinessInsightsWidget";
+import { TodayTasksWidget } from "@/components/TodayTasksWidget";
+import { TeamWidget } from "@/components/TeamWidget";
 
 interface ModuleCard {
   id: string;
@@ -98,6 +102,8 @@ export default function Dashboard() {
   const brand = activeBrand;
   const session = useOSSession();
   const coach = useCoachSession();
+  const { user } = useAuth();
+  const isEmployee = user?.businessRole === "employee";
   const [, navigate] = useLocation();
 
   // Derive typed bottleneck and archetype for coach messages
@@ -434,6 +440,15 @@ export default function Dashboard() {
               Learn More
             </a>
           </div>
+        </div>
+      </div>
+
+      {/* ── Your Business Today ───────────────────────────────────────────── */}
+      <div className="px-6 py-8 lg:px-10" style={{ borderBottom: "1px solid var(--color-border)" }}>
+        <div className="max-w-3xl space-y-6">
+          {!isEmployee && <BusinessInsightsWidget />}
+          <TodayTasksWidget isEmployee={isEmployee} />
+          {!isEmployee && <TeamWidget />}
         </div>
       </div>
 

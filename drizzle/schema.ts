@@ -1,10 +1,15 @@
-import { integer, pgEnum, pgTable, text, timestamp, varchar, jsonb, serial } from "drizzle-orm/pg-core";
+import { integer, numeric, pgEnum, pgTable, text, timestamp, date, varchar, jsonb, serial, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 export const roleEnum = pgEnum("role", ["user", "admin"]);
 export const moneyArchetypeEnum = pgEnum("money_archetype", ["hustler", "giver", "protector", "enjoyer"]);
 export const priorityEnum = pgEnum("priority", ["high", "medium", "low"]);
 export const statusEnum = pgEnum("status", ["pending", "in_progress", "completed"]);
+// Business-level role, separate from `role` (which is the system/support role:
+// user vs Keystone-staff admin). An "owner" runs their own business on the
+// platform; an "employee" is invited by an owner and sees a filtered view of
+// that same business's tasks. Pre-existing users default to "owner".
+export const businessRoleEnum = pgEnum("business_role", ["owner", "employee"]);
 
 /**
  * Core user table backing auth flow.
@@ -17,6 +22,9 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: roleEnum("role").default("user").notNull(),
+  businessRole: businessRoleEnum("businessRole").default("owner").notNull(),
+  /** For an employee, the users.id of the business owner account they belong to. Null for owners. */
+  ownerId: integer("ownerId").references((): AnyPgColumn => users.id),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -209,3 +217,126 @@ export const growthSpurtAudits = pgTable("growth_spurt_audits", {
 
 export type GrowthSpurtAudit = typeof growthSpurtAudits.$inferSelect;
 export type InsertGrowthSpurtAudit = typeof growthSpurtAudits.$inferInsert;
+
+// ─── Customer Inquiries (per-business, every subscriber's own leads) ────────
+// This is NOT Keystone Business Group's own leads (see `leads` /
+// `growth_spurt_audits` above) — it's the inquiry/lead tracker each
+// Growth OS subscriber uses for their own business's customers, feeding
+// their Dashboard "Insights" widget (inquiries / declined / follow-ups).
+
+export const inquiryStatusEnum = pgEnum("inquiry_status", ["new", "follow_up", "declined", "converted"]);
+
+export const customerInquiries = pgTable("customer_inquiries", {
+  id: serial("id").primaryKey(),
+  /** The business this inquiry belongs to — always an owner's users.id, even if an employee logged it. */
+  ownerId: integer("ownerId").notNull(),
+  /** Who actually logged this record — the owner or one of their employees. */
+  createdByUserId: integer("createdByUserId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  contact: varchar("contact", { length: 255 }),
+  source: varchar("source", { length: 128 }),
+  status: inquiryStatusEnum("status").default("new").notNull(),
+  notes: text("notes"),
+  declinedReason: text("declinedReason"),
+  followUpDate: date("followUpDate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type CustomerInquiry = typeof customerInquiries.$inferSelect;
+export type InsertCustomerInquiry = typeof customerInquiries.$inferInsert;
+
+// ─── Invoices (per-business) ─────────────────────────────────────────────────
+
+export const invoiceStatusEnum = pgEnum("invoice_status", ["sent", "paid", "overdue"]);
+
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("ownerId").notNull(),
+  createdByUserId: integer("createdByUserId").notNull(),
+  /** Optional link back to the customer this invoice was billed to. */
+  customerInquiryId: integer("customerInquiryId"),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  description: varchar("description", { length: 500 }),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  status: invoiceStatusEnum("status").default("sent").notNull(),
+  issuedDate: date("issuedDate").notNull(),
+  dueDate: date("dueDate"),
+  paidDate: date("paidDate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+// ─── Daily Tasks (owner + employee operational to-dos) ───────────────────────
+// Separate from `goal_items` (90-day strategic FAST goals). These are the
+// day-to-day tasks shown on the "Today" view — owners see everything across
+// the business, employees see only what's assigned to them.
+
+export const dailyTasks = pgTable("daily_tasks", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("ownerId").notNull(),
+  createdByUserId: integer("createdByUserId").notNull(),
+  /** Null = unassigned / owner's own task. Set = assigned to a specific employee. */
+  assignedToUserId: integer("assignedToUserId"),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  dueDate: date("dueDate"),
+  status: statusEnum("status").default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type DailyTask = typeof dailyTasks.$inferSelect;
+export type InsertDailyTask = typeof dailyTasks.$inferInsert;
+
+// ─── Employee Invites ─────────────────────────────────────────────────────────
+// An owner invites a teammate by email. There's no account for them yet — it
+// is created the moment they actually sign in (via the existing Supabase
+// magic-link flow) with that exact email address, at which point the invite
+// is matched by email and the new user row is created as businessRole
+// "employee" with ownerId set, instead of the normal "owner" default.
+
+export const inviteStatusEnum = pgEnum("invite_status", ["pending", "accepted"]);
+
+export const employeeInvites = pgTable("employee_invites", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("ownerId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  status: inviteStatusEnum("status").default("pending").notNull(),
+  invitedAt: timestamp("invitedAt").defaultNow().notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+});
+
+export type EmployeeInvite = typeof employeeInvites.$inferSelect;
+export type InsertEmployeeInvite = typeof employeeInvites.$inferInsert;
+
+// ─── Keystone's Own Client CRM (admin-only) ──────────────────────────────────
+// Sulette's own pipeline of Keystone Business Group clients/prospects —
+// completely separate from what Growth OS subscribers see. Not fed by
+// `leads`/`growth_spurt_audits` automatically (those stay as-is); this is
+// Sulette's own simple working CRM, styled off her DebtSuccess CRM.
+
+export const clientStageEnum = pgEnum("client_stage", ["lead", "contacted", "proposal", "client", "declined"]);
+
+export const keystoneClients = pgTable("keystone_clients", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  businessName: varchar("businessName", { length: 255 }),
+  contact: varchar("contact", { length: 255 }),
+  stage: clientStageEnum("stage").default("lead").notNull(),
+  /** The engagement's value — e.g. an estimate of 30% of net growth for the first term. */
+  value: numeric("value", { precision: 12, scale: 2 }),
+  source: varchar("source", { length: 128 }),
+  notes: text("notes"),
+  declinedReason: text("declinedReason"),
+  followUpDate: date("followUpDate"),
+  createdByUserId: integer("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type KeystoneClient = typeof keystoneClients.$inferSelect;
+export type InsertKeystoneClient = typeof keystoneClients.$inferInsert;

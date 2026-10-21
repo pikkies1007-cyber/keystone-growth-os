@@ -19,6 +19,7 @@ import PricingToolkit from "./pages/PricingToolkit";
 import WeeklyRhythm from "./pages/WeeklyRhythm";
 import FinancialRoadmap from "./pages/FinancialRoadmap";
 import AdminLeads from "./pages/AdminLeads";
+import AdminCRM from "./pages/AdminCRM";
 import BusinessCoach from "./pages/BusinessCoach";
 import ProgressDashboard from "./pages/ProgressDashboard";
 import GrowthSpurtAudit from "./pages/GrowthSpurtAudit";
@@ -57,6 +58,7 @@ function App() {
                   <Route path="/os/coach" component={BusinessCoach} />
                   <Route path="/os/progress" component={ProgressDashboard} />
                   <Route path="/os/admin/leads" component={AdminLeads} />
+                  <Route path="/os/admin/crm" component={AdminCRM} />
                   <Route component={NotFound} />
                 </Switch>
               </AppLayout>

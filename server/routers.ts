@@ -8,9 +8,24 @@ import {
   saveToolkitSubmission, getToolkitSubmissionHistory, getLatestSubmissionPerToolkit, updateSuggestionStatus,
   getSuggestionsByToolkit, addWinLearning, getWinsLearningsByToolkit, updateGoalItemStatusAndSyncSuggestion,
   upsertGrowthSpurtAudit, getAllGrowthSpurtAudits,
+  createCustomerInquiry, getCustomerInquiries, updateCustomerInquiry,
+  createInvoice, getInvoices, updateInvoiceStatus,
+  createDailyTask, getDailyTasks, getDailyTasksForAssignee, updateDailyTaskStatus, deleteDailyTask,
+  getBusinessTeam, createEmployeeInvite, getInvitesForOwner,
+  createKeystoneClient, getAllKeystoneClients, updateKeystoneClient,
 } from "./db";
-import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment } from "./email";
+import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment, sendEmployeeInviteEmail } from "./email";
+import type { User } from "../drizzle/schema";
 import { z } from "zod";
+
+/**
+ * The business account a user's inquiries/invoices/tasks roll up to.
+ * Owners are their own business; employees roll up to the owner that
+ * invited them (ctx.user.ownerId).
+ */
+function businessOwnerId(user: User): number {
+  return user.businessRole === "employee" && user.ownerId ? user.ownerId : user.id;
+}
 
 // ─── Lead Capture Router ──────────────────────────────────────────────────────
 
@@ -321,6 +336,214 @@ const growthSpurtRouter = router({
     }),
 });
 
+// ─── Customer Inquiries Router (per-business) ────────────────────────────────
+// Every subscriber's own inquiry/lead tracker for their business — separate
+// from Keystone's own `leads`/`growthSpurt` data. Feeds the Dashboard
+// Insights widget. Owners and their employees share the same business pool.
+
+const inquiriesRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return getCustomerInquiries(businessOwnerId(ctx.user));
+  }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(255),
+        contact: z.string().max(255).optional(),
+        source: z.string().max(128).optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return createCustomerInquiry({
+        ownerId: businessOwnerId(ctx.user),
+        createdByUserId: ctx.user.id,
+        name: input.name,
+        contact: input.contact ?? null,
+        source: input.source ?? null,
+        notes: input.notes ?? null,
+        status: "new",
+      });
+    }),
+
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        status: z.enum(["new", "follow_up", "declined", "converted"]).optional(),
+        notes: z.string().optional(),
+        declinedReason: z.string().optional(),
+        followUpDate: z.string().optional(), // YYYY-MM-DD
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { id, ...patch } = input;
+      return updateCustomerInquiry(id, patch);
+    }),
+});
+
+// ─── Invoices Router (per-business) ──────────────────────────────────────────
+
+const invoicesRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return getInvoices(businessOwnerId(ctx.user));
+  }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        clientName: z.string().min(1).max(255),
+        description: z.string().max(500).optional(),
+        amount: z.number().positive(),
+        issuedDate: z.string(), // YYYY-MM-DD
+        dueDate: z.string().optional(),
+        customerInquiryId: z.number().int().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return createInvoice({
+        ownerId: businessOwnerId(ctx.user),
+        createdByUserId: ctx.user.id,
+        clientName: input.clientName,
+        description: input.description ?? null,
+        amount: input.amount.toFixed(2),
+        status: "sent",
+        issuedDate: input.issuedDate,
+        dueDate: input.dueDate ?? null,
+        customerInquiryId: input.customerInquiryId ?? null,
+      });
+    }),
+
+  markStatus: protectedProcedure
+    .input(z.object({ id: z.number().int(), status: z.enum(["sent", "paid", "overdue"]) }))
+    .mutation(async ({ input }) => {
+      const paidDate = input.status === "paid" ? new Date().toISOString().slice(0, 10) : undefined;
+      return updateInvoiceStatus(input.id, input.status, paidDate);
+    }),
+});
+
+// ─── Daily Tasks Router (owner "Today" view + employee filtered view) ───────
+
+const tasksRouter = router({
+  /** Owners get every task for the business; employees get only their own. */
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const ownerId = businessOwnerId(ctx.user);
+    if (ctx.user.businessRole === "employee") {
+      return getDailyTasksForAssignee(ownerId, ctx.user.id);
+    }
+    return getDailyTasks(ownerId);
+  }),
+
+  create: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(1).max(500),
+        description: z.string().optional(),
+        dueDate: z.string().optional(), // YYYY-MM-DD
+        assignedToUserId: z.number().int().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return createDailyTask({
+        ownerId: businessOwnerId(ctx.user),
+        createdByUserId: ctx.user.id,
+        assignedToUserId: input.assignedToUserId ?? null,
+        title: input.title,
+        description: input.description ?? null,
+        dueDate: input.dueDate ?? null,
+        status: "pending",
+      });
+    }),
+
+  updateStatus: protectedProcedure
+    .input(z.object({ id: z.number().int(), status: z.enum(["pending", "in_progress", "completed"]) }))
+    .mutation(async ({ input }) => {
+      return updateDailyTaskStatus(input.id, input.status);
+    }),
+
+  delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
+    await deleteDailyTask(input.id);
+    return { success: true };
+  }),
+});
+
+// ─── Team Router (an owner's invited employees) ──────────────────────────────
+
+const teamRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const ownerId = businessOwnerId(ctx.user);
+    return getBusinessTeam(ownerId);
+  }),
+
+  listInvites: protectedProcedure.query(async ({ ctx }) => {
+    // Only owners manage invites — an employee has no team of their own.
+    if (ctx.user.businessRole === "employee") return [];
+    return getInvitesForOwner(ctx.user.id);
+  }),
+
+  invite: protectedProcedure
+    .input(z.object({ email: z.string().email().max(320) }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.businessRole === "employee") {
+        throw new Error("Only the business owner can invite teammates.");
+      }
+      const email = input.email.toLowerCase().trim();
+      const invite = await createEmployeeInvite({ ownerId: ctx.user.id, email, status: "pending" });
+
+      void (async () => {
+        try {
+          const signInUrl = "https://keystonebusinessgroup.co.za/os";
+          await sendEmployeeInviteEmail({
+            inviteeEmail: email,
+            ownerName: ctx.user.name ?? "Your team",
+            signInUrl,
+          });
+        } catch (err) {
+          console.error("[Team] Invite email failed:", err);
+        }
+      })();
+
+      return invite;
+    }),
+});
+
+// ─── Dashboard Insights Router ───────────────────────────────────────────────
+// Powers the owner's Insights widget: "X inquiries, Y declined, Z need
+// follow-up, N invoices sent" — scoped to the signed-in business.
+
+const dashboardRouter = router({
+  insights: protectedProcedure
+    .input(z.object({ days: z.number().int().min(1).max(365).optional() }))
+    .query(async ({ input, ctx }) => {
+      const ownerId = businessOwnerId(ctx.user);
+      const windowDays = input.days ?? 30;
+      const cutoff = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
+
+      const [allInquiries, allInvoices] = await Promise.all([getCustomerInquiries(ownerId), getInvoices(ownerId)]);
+
+      const periodInquiries = allInquiries.filter((i) => new Date(i.createdAt) >= cutoff);
+      const periodInvoices = allInvoices.filter((inv) => new Date(inv.issuedDate) >= cutoff);
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      return {
+        windowDays,
+        inquiriesTotal: periodInquiries.length,
+        inquiriesDeclined: periodInquiries.filter((i) => i.status === "declined").length,
+        inquiriesNeedFollowUp: allInquiries.filter(
+          (i) => i.status === "follow_up" && (!i.followUpDate || i.followUpDate <= today)
+        ).length,
+        inquiriesConverted: periodInquiries.filter((i) => i.status === "converted").length,
+        invoicesSent: periodInvoices.filter((inv) => inv.status === "sent" || inv.status === "overdue").length,
+        invoicesPaid: periodInvoices.filter((inv) => inv.status === "paid").length,
+        invoicesOverdue: allInvoices.filter((inv) => inv.status === "overdue").length,
+        totalInvoicedAmount: periodInvoices.reduce((sum, inv) => sum + Number(inv.amount), 0),
+        totalPaidAmount: periodInvoices.filter((inv) => inv.status === "paid").reduce((sum, inv) => sum + Number(inv.amount), 0),
+      };
+    }),
+});
+
 // ─── Admin Router ────────────────────────────────────────────────────────────
 
 const adminRouter = router({
@@ -364,6 +587,55 @@ const adminRouter = router({
   getGrowthSpurtAudits: adminProcedure.query(async () => {
     return getAllGrowthSpurtAudits();
   }),
+
+  // ── Keystone's own client CRM — admin only, separate from subscriber data ──
+  listClients: adminProcedure.query(async () => {
+    return getAllKeystoneClients();
+  }),
+
+  createClient: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(255),
+        businessName: z.string().max(255).optional(),
+        contact: z.string().max(255).optional(),
+        stage: z.enum(["lead", "contacted", "proposal", "client", "declined"]).optional(),
+        value: z.number().optional(),
+        source: z.string().max(128).optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return createKeystoneClient({
+        name: input.name,
+        businessName: input.businessName ?? null,
+        contact: input.contact ?? null,
+        stage: input.stage ?? "lead",
+        value: input.value !== undefined ? input.value.toFixed(2) : null,
+        source: input.source ?? null,
+        notes: input.notes ?? null,
+        createdByUserId: ctx.user.id,
+      });
+    }),
+
+  updateClient: adminProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        name: z.string().max(255).optional(),
+        businessName: z.string().max(255).optional(),
+        contact: z.string().max(255).optional(),
+        stage: z.enum(["lead", "contacted", "proposal", "client", "declined"]).optional(),
+        value: z.number().optional(),
+        notes: z.string().optional(),
+        declinedReason: z.string().optional(),
+        followUpDate: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { id, value, ...rest } = input;
+      return updateKeystoneClient(id, { ...rest, ...(value !== undefined ? { value: value.toFixed(2) } : {}) });
+    }),
 });
 
 const coachRouter = router({
@@ -504,6 +776,11 @@ export const appRouter = router({
   audit: auditRouter,
   goals: goalsRouter,
   growthSpurt: growthSpurtRouter,
+  inquiries: inquiriesRouter,
+  invoices: invoicesRouter,
+  tasks: tasksRouter,
+  team: teamRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

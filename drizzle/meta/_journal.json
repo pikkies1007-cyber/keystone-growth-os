@@ -36,6 +36,27 @@
       "when": 1791816545000,
       "tag": "0004_flawless_matthew_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792582263126,
+      "tag": "0005_hesitant_randall_flagg",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792582560825,
+      "tag": "0006_icy_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792582677275,
+      "tag": "0007_exotic_zuras",
+      "breakpoints": true
     }
   ]
 }

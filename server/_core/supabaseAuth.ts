@@ -31,13 +31,35 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
 
   const supabaseUser = data.user;
 
+  // A brand-new user whose email matches a pending employee invite is
+  // created as that owner's employee, not as a new "owner" (the default).
+  // This only ever affects the FIRST insert — upsertUser deliberately
+  // excludes businessRole/ownerId from its update path.
+  let businessRole: "owner" | "employee" | undefined;
+  let ownerId: number | undefined;
+  let matchedInviteId: number | undefined;
+  if (supabaseUser.email) {
+    const invite = await db.getPendingInviteByEmail(supabaseUser.email.toLowerCase());
+    if (invite) {
+      businessRole = "employee";
+      ownerId = invite.ownerId;
+      matchedInviteId = invite.id;
+    }
+  }
+
   await db.upsertUser({
     openId: supabaseUser.id,
     name: (supabaseUser.user_metadata?.full_name as string | undefined) ?? null,
     email: supabaseUser.email ?? null,
     loginMethod: supabaseUser.app_metadata?.provider ?? "email",
     lastSignedIn: new Date(),
+    businessRole,
+    ownerId,
   });
+
+  if (matchedInviteId !== undefined) {
+    await db.acceptInvite(matchedInviteId);
+  }
 
   const localUser = await db.getUserByOpenId(supabaseUser.id);
   return localUser ?? null;

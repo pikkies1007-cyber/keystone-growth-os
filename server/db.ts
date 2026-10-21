@@ -5,6 +5,8 @@ import {
   InsertUser, users, leads, InsertLead, auditResults, InsertAuditResult, goalItems, InsertGoalItem,
   lmsEnrolments, InsertLmsEnrolment, toolkitSubmissions, InsertToolkitSubmission, toolkitSuggestions,
   winsLearnings, InsertWinLearning, growthSpurtAudits, InsertGrowthSpurtAudit,
+  customerInquiries, InsertCustomerInquiry, invoices, InsertInvoice, dailyTasks, InsertDailyTask,
+  employeeInvites, InsertEmployeeInvite, keystoneClients, InsertKeystoneClient,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -46,6 +48,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (user.lastSignedIn !== undefined) { values.lastSignedIn = user.lastSignedIn; updateSet.lastSignedIn = user.lastSignedIn; }
     if (user.role !== undefined) { values.role = user.role; updateSet.role = user.role; }
     else if (user.openId === ENV.ownerOpenId) { values.role = 'admin'; updateSet.role = 'admin'; }
+    // businessRole/ownerId are set only at first creation (an employee invite
+    // match), never overwritten on subsequent logins — intentionally absent
+    // from updateSet.
+    if (user.businessRole !== undefined) values.businessRole = user.businessRole;
+    if (user.ownerId !== undefined) values.ownerId = user.ownerId;
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
@@ -367,4 +374,168 @@ export async function getAllGrowthSpurtAudits() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(growthSpurtAudits).orderBy(desc(growthSpurtAudits.createdAt));
+}
+
+// ─── Customer Inquiries (per-business) ───────────────────────────────────────
+
+export async function createCustomerInquiry(data: InsertCustomerInquiry) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(customerInquiries).values(data).returning();
+  return result[0];
+}
+
+export async function getCustomerInquiries(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(customerInquiries)
+    .where(eq(customerInquiries.ownerId, ownerId))
+    .orderBy(desc(customerInquiries.createdAt));
+}
+
+export async function updateCustomerInquiry(
+  id: number,
+  patch: Partial<Pick<InsertCustomerInquiry, "status" | "notes" | "declinedReason" | "followUpDate" | "name" | "contact" | "source">>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.update(customerInquiries).set(patch).where(eq(customerInquiries.id, id)).returning();
+  return result[0];
+}
+
+// ─── Invoices (per-business) ─────────────────────────────────────────────────
+
+export async function createInvoice(data: InsertInvoice) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(invoices).values(data).returning();
+  return result[0];
+}
+
+export async function getInvoices(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(invoices).where(eq(invoices.ownerId, ownerId)).orderBy(desc(invoices.issuedDate));
+}
+
+export async function updateInvoiceStatus(id: number, status: "sent" | "paid" | "overdue", paidDate?: string | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db
+    .update(invoices)
+    .set({ status, ...(paidDate !== undefined ? { paidDate } : {}) })
+    .where(eq(invoices.id, id))
+    .returning();
+  return result[0];
+}
+
+// ─── Daily Tasks (owner + employee) ──────────────────────────────────────────
+
+export async function createDailyTask(data: InsertDailyTask) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(dailyTasks).values(data).returning();
+  return result[0];
+}
+
+/** All tasks for the business. Owners see this unfiltered. */
+export async function getDailyTasks(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dailyTasks).where(eq(dailyTasks.ownerId, ownerId)).orderBy(dailyTasks.dueDate);
+}
+
+/** Only tasks assigned to one specific person — what an employee sees. */
+export async function getDailyTasksForAssignee(ownerId: number, assignedToUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(dailyTasks)
+    .where(and(eq(dailyTasks.ownerId, ownerId), eq(dailyTasks.assignedToUserId, assignedToUserId)))
+    .orderBy(dailyTasks.dueDate);
+}
+
+export async function updateDailyTaskStatus(id: number, status: "pending" | "in_progress" | "completed") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.update(dailyTasks).set({ status }).where(eq(dailyTasks.id, id)).returning();
+  return result[0];
+}
+
+export async function deleteDailyTask(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(dailyTasks).where(eq(dailyTasks.id, id));
+}
+
+// ─── Business team (owner + their employees) ─────────────────────────────────
+
+export async function getBusinessTeam(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).where(eq(users.ownerId, ownerId));
+}
+
+// ─── Employee Invites ─────────────────────────────────────────────────────────
+
+export async function createEmployeeInvite(data: InsertEmployeeInvite) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(employeeInvites).values(data).returning();
+  return result[0];
+}
+
+export async function getInvitesForOwner(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(employeeInvites).where(eq(employeeInvites.ownerId, ownerId)).orderBy(desc(employeeInvites.invitedAt));
+}
+
+/** Matched case-sensitively by the email Supabase reports — callers should lowercase both sides. */
+export async function getPendingInviteByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(employeeInvites)
+    .where(and(eq(employeeInvites.email, email), eq(employeeInvites.status, "pending")))
+    .orderBy(desc(employeeInvites.invitedAt))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function acceptInvite(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(employeeInvites).set({ status: "accepted", acceptedAt: new Date() }).where(eq(employeeInvites.id, id));
+}
+
+// ─── Keystone's Own Client CRM (admin-only) ──────────────────────────────────
+
+export async function createKeystoneClient(data: InsertKeystoneClient) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(keystoneClients).values(data).returning();
+  return result[0];
+}
+
+export async function getAllKeystoneClients() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(keystoneClients).orderBy(desc(keystoneClients.createdAt));
+}
+
+export async function updateKeystoneClient(
+  id: number,
+  patch: Partial<
+    Pick<InsertKeystoneClient, "name" | "businessName" | "contact" | "stage" | "value" | "source" | "notes" | "declinedReason" | "followUpDate">
+  >
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.update(keystoneClients).set(patch).where(eq(keystoneClients.id, id)).returning();
+  return result[0];
 }

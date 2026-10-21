@@ -300,3 +300,48 @@ export async function sendOwnerLeadNotification(
     console.log(`[email] Owner notification sent for lead: ${name}`);
   }
 }
+
+// ─── 4. Employee invite ───────────────────────────────────────────────────────
+
+export interface EmployeeInviteEmailParams {
+  inviteeEmail: string;
+  ownerName: string;
+  /** Full app sign-in URL, e.g. https://keystonebusinessgroup.co.za/os */
+  signInUrl: string;
+}
+
+export async function sendEmployeeInviteEmail(params: EmployeeInviteEmailParams): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+
+  const { inviteeEmail, ownerName, signInUrl } = params;
+
+  const html = emailWrapper(`
+    <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2dd4a7;">You've been invited</p>
+    <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#e8edf2;">${ownerName} has added you to their team</h1>
+    <p style="margin:0 0 20px;font-size:14px;color:#8899aa;line-height:1.7;">
+      You now have access to their Keystone Growth OS workspace — sign in with this email address (${inviteeEmail}) to see your tasks.
+    </p>
+    <a href="${signInUrl}"
+       style="display:inline-block;background:#2dd4a7;color:#0d1117;font-size:14px;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;letter-spacing:0.02em;">
+      Sign In →
+    </a>
+    <p style="margin:24px 0 0;font-size:13px;color:#4a5568;line-height:1.6;">
+      You'll get a one-time sign-in code by email — no password needed.
+    </p>
+  `);
+
+  const { error } = await resend.emails.send({
+    from: ENV.resendFromAddress,
+    to: [inviteeEmail],
+    subject: `${ownerName} added you to their Keystone Growth OS team`,
+    html,
+    tags: [{ name: "type", value: "employee_invite" }],
+  });
+
+  if (error) {
+    console.error("[email] sendEmployeeInviteEmail failed:", error);
+  } else {
+    console.log(`[email] Employee invite sent to ${inviteeEmail}`);
+  }
+}

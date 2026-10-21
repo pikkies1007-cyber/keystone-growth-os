@@ -138,9 +138,12 @@ function readSessionState(): OSSessionState {
   const hasCashBottleneck =
     auditResult?.primaryBottleneck?.toLowerCase() === "cash";
 
-  const isPricingUnlocked = hasCashBottleneck || isWealthResetComplete;
-  const isWeeklyRhythmUnlocked = isWealthResetComplete;
-  const isRoadmapUnlocked = isWealthResetComplete;
+  // All toolkits are available immediately to every user — no progressive
+  // unlock gating. (Previously these required completing the Wealth Reset
+  // journey or having a cash bottleneck first.)
+  const isPricingUnlocked = true;
+  const isWeeklyRhythmUnlocked = true;
+  const isRoadmapUnlocked = true;
 
   return {
     sessionId,

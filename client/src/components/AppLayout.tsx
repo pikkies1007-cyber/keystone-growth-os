@@ -344,6 +344,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </div>
             </Link>
           )}
+          {isAdmin && (
+            <Link href="/os/admin/crm">
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 cursor-pointer",
+                  location.startsWith("/os/admin/crm") ? "sidebar-item-active" : "hover:bg-white/5"
+                )}
+              >
+                <Sparkles
+                  className="w-4 h-4 shrink-0"
+                  style={{ color: location.startsWith("/os/admin/crm") ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium" style={{ color: location.startsWith("/os/admin/crm") ? "var(--color-primary)" : "var(--color-text-base)" }}>Your Clients</p>
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Keystone's own CRM</p>
+                </div>
+              </div>
+            </Link>
+          )}
           {!user && (
             <Link href="/os/coach">
               <div
@@ -442,6 +461,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium" style={{ color: location.startsWith("/os/admin") ? "var(--color-primary)" : "var(--color-text-base)" }}>Admin</p>
                   <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Leads &amp; diagnostics</p>
+                </div>
+              </div>
+            </Link>
+          )}
+          {isAdmin && (
+            <Link href="/os/admin/crm">
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-150 cursor-pointer",
+                  location.startsWith("/os/admin/crm") ? "sidebar-item-active" : "hover:bg-white/5"
+                )}
+              >
+                <Sparkles
+                  className="w-5 h-5 shrink-0"
+                  style={{ color: location.startsWith("/os/admin/crm") ? "var(--color-primary)" : "var(--color-text-muted)" }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium" style={{ color: location.startsWith("/os/admin/crm") ? "var(--color-primary)" : "var(--color-text-base)" }}>Your Clients</p>
+                  <p className="text-xs" style={{ color: "var(--color-text-subtle)" }}>Keystone's own CRM</p>
                 </div>
               </div>
             </Link>
