@@ -12,11 +12,27 @@ import {
   createInvoice, getInvoices, updateInvoiceStatus,
   createDailyTask, getDailyTasks, getDailyTasksForAssignee, updateDailyTaskStatus, deleteDailyTask,
   getBusinessTeam, createEmployeeInvite, getInvitesForOwner,
-  createKeystoneClient, getAllKeystoneClients, updateKeystoneClient,
+  createKeystoneClient, getAllKeystoneClients, updateKeystoneClient, getTermsForClient, upsertKeystoneClientTerm,
 } from "./db";
 import { sendLeadCaptureConfirmation, sendOwnerLeadNotification, sendWealthResetEnrolment, sendEmployeeInviteEmail } from "./email";
 import type { User } from "../drizzle/schema";
 import { z } from "zod";
+
+/** Keystone's real deal-pipeline workflow, ported from Sulette's DebtSuccess CRM. */
+const KS_STAGES = [
+  "Audit completed",
+  "Discovery meeting booked",
+  "Discovery meeting held",
+  "SLA sent",
+  "SLA signed",
+  "Documents & baseline",
+  "Term 1 (set-up, no fee)",
+  "Profit share active",
+  "Completed",
+  "Lost",
+] as const;
+const KS_DIRECTORS = ["Sulette", "Clifford", "Mauritz"] as const;
+const KS_ROUTES = ["Sales", "Delegation", "Funding"] as const;
 
 /**
  * The business account a user's inquiries/invoices/tasks roll up to.
@@ -589,8 +605,14 @@ const adminRouter = router({
   }),
 
   // ── Keystone's own client CRM — admin only, separate from subscriber data ──
+  // Stages/routes mirror Sulette's real "Keystone deal" workflow, ported
+  // from her existing DebtSuccess CRM so the pipeline feels identical.
   listClients: adminProcedure.query(async () => {
     return getAllKeystoneClients();
+  }),
+
+  getClientTerms: adminProcedure.input(z.object({ clientId: z.number().int() })).query(async ({ input }) => {
+    return getTermsForClient(input.clientId);
   }),
 
   createClient: adminProcedure
@@ -599,7 +621,10 @@ const adminRouter = router({
         name: z.string().min(1).max(255),
         businessName: z.string().max(255).optional(),
         contact: z.string().max(255).optional(),
-        stage: z.enum(["lead", "contacted", "proposal", "client", "declined"]).optional(),
+        stage: z.enum(KS_STAGES).optional(),
+        assignedTo: z.enum(KS_DIRECTORS).optional(),
+        route: z.enum(KS_ROUTES).optional(),
+        bottleneck: z.string().optional(),
         value: z.number().optional(),
         source: z.string().max(128).optional(),
         notes: z.string().optional(),
@@ -610,7 +635,10 @@ const adminRouter = router({
         name: input.name,
         businessName: input.businessName ?? null,
         contact: input.contact ?? null,
-        stage: input.stage ?? "lead",
+        stage: input.stage ?? "Audit completed",
+        assignedTo: input.assignedTo ?? "Sulette",
+        route: input.route ?? "Delegation",
+        bottleneck: input.bottleneck ?? null,
         value: input.value !== undefined ? input.value.toFixed(2) : null,
         source: input.source ?? null,
         notes: input.notes ?? null,
@@ -625,16 +653,56 @@ const adminRouter = router({
         name: z.string().max(255).optional(),
         businessName: z.string().max(255).optional(),
         contact: z.string().max(255).optional(),
-        stage: z.enum(["lead", "contacted", "proposal", "client", "declined"]).optional(),
+        stage: z.enum(KS_STAGES).optional(),
+        assignedTo: z.enum(KS_DIRECTORS).optional(),
+        route: z.enum(KS_ROUTES).optional(),
+        bottleneck: z.string().optional(),
+        discoveryDate: z.string().optional(),
+        slaSentDate: z.string().optional(),
+        slaSignedDate: z.string().optional(),
+        cipcReceived: z.boolean().optional(),
+        financialsReceived: z.boolean().optional(),
+        baselineNetProfit: z.number().optional(),
+        baselineAgreedDate: z.string().optional(),
+        startDate: z.string().optional(),
+        sharePct: z.number().int().optional(),
+        termMonths: z.number().int().optional(),
+        contractMonths: z.number().int().optional(),
         value: z.number().optional(),
         notes: z.string().optional(),
         declinedReason: z.string().optional(),
+        lostReason: z.string().optional(),
         followUpDate: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const { id, value, ...rest } = input;
-      return updateKeystoneClient(id, { ...rest, ...(value !== undefined ? { value: value.toFixed(2) } : {}) });
+      const { id, value, baselineNetProfit, ...rest } = input;
+      return updateKeystoneClient(id, {
+        ...rest,
+        ...(value !== undefined ? { value: value.toFixed(2) } : {}),
+        ...(baselineNetProfit !== undefined ? { baselineNetProfit: baselineNetProfit.toFixed(2) } : {}),
+      });
+    }),
+
+  /** Records or updates one 3-month billing term's net profit / fee / payment for a deal. */
+  recordClientTerm: adminProcedure
+    .input(
+      z.object({
+        clientId: z.number().int(),
+        termNumber: z.number().int(),
+        netProfit: z.number().optional(),
+        feeAmount: z.number().optional(),
+        paidDate: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return upsertKeystoneClientTerm({
+        clientId: input.clientId,
+        termNumber: input.termNumber,
+        netProfit: input.netProfit !== undefined ? input.netProfit.toFixed(2) : null,
+        feeAmount: input.feeAmount !== undefined ? input.feeAmount.toFixed(2) : null,
+        paidDate: input.paidDate ?? null,
+      });
     }),
 });
 

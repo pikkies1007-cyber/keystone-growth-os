@@ -7,6 +7,7 @@ import {
   winsLearnings, InsertWinLearning, growthSpurtAudits, InsertGrowthSpurtAudit,
   customerInquiries, InsertCustomerInquiry, invoices, InsertInvoice, dailyTasks, InsertDailyTask,
   employeeInvites, InsertEmployeeInvite, keystoneClients, InsertKeystoneClient,
+  keystoneClientTerms, InsertKeystoneClientTerm,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -531,11 +532,64 @@ export async function getAllKeystoneClients() {
 export async function updateKeystoneClient(
   id: number,
   patch: Partial<
-    Pick<InsertKeystoneClient, "name" | "businessName" | "contact" | "stage" | "value" | "source" | "notes" | "declinedReason" | "followUpDate">
+    Pick<
+      InsertKeystoneClient,
+      | "name"
+      | "businessName"
+      | "contact"
+      | "stage"
+      | "assignedTo"
+      | "route"
+      | "bottleneck"
+      | "discoveryDate"
+      | "slaSentDate"
+      | "slaSignedDate"
+      | "cipcReceived"
+      | "financialsReceived"
+      | "baselineNetProfit"
+      | "baselineAgreedDate"
+      | "startDate"
+      | "sharePct"
+      | "termMonths"
+      | "contractMonths"
+      | "value"
+      | "source"
+      | "notes"
+      | "declinedReason"
+      | "lostReason"
+      | "followUpDate"
+    >
   >
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.update(keystoneClients).set(patch).where(eq(keystoneClients.id, id)).returning();
+  return result[0];
+}
+
+// ─── Keystone deal terms (3-month billing terms per client) ─────────────────
+
+export async function getTermsForClient(clientId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(keystoneClientTerms).where(eq(keystoneClientTerms.clientId, clientId)).orderBy(keystoneClientTerms.termNumber);
+}
+
+export async function upsertKeystoneClientTerm(data: InsertKeystoneClientTerm) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await db
+    .select()
+    .from(keystoneClientTerms)
+    .where(and(eq(keystoneClientTerms.clientId, data.clientId), eq(keystoneClientTerms.termNumber, data.termNumber)));
+  if (existing[0]) {
+    const result = await db
+      .update(keystoneClientTerms)
+      .set({ netProfit: data.netProfit, feeAmount: data.feeAmount, paidDate: data.paidDate })
+      .where(eq(keystoneClientTerms.id, existing[0].id))
+      .returning();
+    return result[0];
+  }
+  const result = await db.insert(keystoneClientTerms).values(data).returning();
   return result[0];
 }

@@ -1,4 +1,4 @@
-import { integer, numeric, pgEnum, pgTable, text, timestamp, date, varchar, jsonb, serial, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { integer, numeric, pgEnum, pgTable, text, timestamp, date, varchar, jsonb, serial, boolean, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 export const roleEnum = pgEnum("role", ["user", "admin"]);
@@ -319,19 +319,62 @@ export type InsertEmployeeInvite = typeof employeeInvites.$inferInsert;
 // `leads`/`growth_spurt_audits` automatically (those stay as-is); this is
 // Sulette's own simple working CRM, styled off her DebtSuccess CRM.
 
-export const clientStageEnum = pgEnum("client_stage", ["lead", "contacted", "proposal", "client", "declined"]);
+// Stages mirror Sulette's real Keystone Business Group deal workflow
+// (ported from her DebtSuccess CRM's "Keystone deal" pipeline), so the
+// labels are deliberately the same ones she already works in day to day.
+export const clientStageEnum = pgEnum("client_stage", [
+  "Audit completed",
+  "Discovery meeting booked",
+  "Discovery meeting held",
+  "SLA sent",
+  "SLA signed",
+  "Documents & baseline",
+  "Term 1 (set-up, no fee)",
+  "Profit share active",
+  "Completed",
+  "Lost",
+  // Legacy values kept for backward compatibility with the original
+  // simple pipeline shipped before this workflow port — unused going
+  // forward, never written by the app.
+  "lead",
+  "contacted",
+  "proposal",
+  "client",
+  "declined",
+]);
+
+/** Which of Keystone's three directors is driving a deal, and by which route. */
+export const ksRouteEnum = pgEnum("ks_route", ["Sales", "Delegation", "Funding"]);
 
 export const keystoneClients = pgTable("keystone_clients", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   businessName: varchar("businessName", { length: 255 }),
   contact: varchar("contact", { length: 255 }),
-  stage: clientStageEnum("stage").default("lead").notNull(),
-  /** The engagement's value — e.g. an estimate of 30% of net growth for the first term. */
+  stage: clientStageEnum("stage").default("Audit completed").notNull(),
+  /** Director driving this deal: "Sulette" | "Clifford" | "Mauritz". */
+  assignedTo: varchar("assignedTo", { length: 64 }).default("Sulette"),
+  route: ksRouteEnum("route").default("Delegation"),
+  /** The bottleneck identified in the original audit, if any. */
+  bottleneck: text("bottleneck"),
+  discoveryDate: date("discoveryDate"),
+  slaSentDate: date("slaSentDate"),
+  slaSignedDate: date("slaSignedDate"),
+  cipcReceived: boolean("cipcReceived").default(false).notNull(),
+  financialsReceived: boolean("financialsReceived").default(false).notNull(),
+  baselineNetProfit: numeric("baselineNetProfit", { precision: 12, scale: 2 }),
+  baselineAgreedDate: date("baselineAgreedDate"),
+  startDate: date("startDate"),
+  /** % of net growth above baseline taken as Keystone's fee — defaults to the standard 30%. */
+  sharePct: integer("sharePct").default(30).notNull(),
+  termMonths: integer("termMonths").default(3).notNull(),
+  contractMonths: integer("contractMonths").default(36).notNull(),
+  /** Kept for the original simple pipeline; an estimate of deal value before full terms exist. */
   value: numeric("value", { precision: 12, scale: 2 }),
   source: varchar("source", { length: 128 }),
   notes: text("notes"),
   declinedReason: text("declinedReason"),
+  lostReason: text("lostReason"),
   followUpDate: date("followUpDate"),
   createdByUserId: integer("createdByUserId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -340,3 +383,23 @@ export const keystoneClients = pgTable("keystone_clients", {
 
 export type KeystoneClient = typeof keystoneClients.$inferSelect;
 export type InsertKeystoneClient = typeof keystoneClients.$inferInsert;
+
+// Each signed deal is billed in terms (default 3 months each). Term 1 is
+// always the set-up term with no fee; from term 2 the fee is sharePct% of
+// net-profit growth above the agreed baseline — mirrors the term table in
+// Sulette's existing Keystone deal modal.
+export const keystoneClientTerms = pgTable("keystone_client_terms", {
+  id: serial("id").primaryKey(),
+  clientId: integer("clientId")
+    .notNull()
+    .references(() => keystoneClients.id, { onDelete: "cascade" }),
+  termNumber: integer("termNumber").notNull(),
+  netProfit: numeric("netProfit", { precision: 12, scale: 2 }),
+  feeAmount: numeric("feeAmount", { precision: 12, scale: 2 }),
+  paidDate: date("paidDate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export type KeystoneClientTerm = typeof keystoneClientTerms.$inferSelect;
+export type InsertKeystoneClientTerm = typeof keystoneClientTerms.$inferInsert;
