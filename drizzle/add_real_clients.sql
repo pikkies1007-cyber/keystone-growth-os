@@ -4,7 +4,7 @@
 
 INSERT INTO "keystone_clients"
   ("name", "businessName", "contact", "stage", "assignedTo", "route", "sharePct", "termMonths", "contractMonths", "createdByUserId")
-SELECT v."name", v."businessName", v."contact", v."stage", v."assignedTo", v."route", v."sharePct", v."termMonths", v."contractMonths",
+SELECT v."name", v."businessName", v."contact", v."stage"::client_stage, v."assignedTo", v."route"::ks_route, v."sharePct", v."termMonths", v."contractMonths",
   (SELECT "id" FROM "users" WHERE "email" = 'pikkies1007@gmail.com' LIMIT 1)
 FROM (VALUES
   ('Corika Prinsloo', 'Forever Perfect', NULL, 'Discovery meeting held', 'Sulette', 'Delegation', 30, 3, 36),
